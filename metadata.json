@@ -1,0 +1,6 @@
+{
+  "name": "Trivia Event Live",
+  "description": "Plataforma de trivia en vivo en tiempo real para eventos presenciales con rankings interactivos de alta velocidad.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

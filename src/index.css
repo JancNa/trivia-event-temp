@@ -1,0 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+:root {
+  --bg-default: #faf9fe;
+  --bg-subtle: #ffffff;
+  --bg-elevated: #fafafc;
+  --text-primary: #101223;
+  --text-body: #5b5d6b;
+  --text-secondary: #b3b5bd;
+  --border-default: #d2d4da;
+}
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-primary: #fed600;
+  --color-secondary: var(--bg-default);
+  --color-tertiary: var(--text-primary);
+  
+  --color-brand-yellow: #fed600;
+  --color-brand-dark: var(--bg-default);
+  --color-brand-light: var(--text-primary);
+  
+  --color-bg-subtle: var(--bg-subtle);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-text-body: var(--text-body);
+  --color-text-secondary: var(--text-secondary);
+  --color-border-default: var(--border-default);
+}
+
+@layer utilities {
+  /* Subtle scrollbars for rankings scroll */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(254, 214, 0, 0.3);
+    border-radius: 9999px;
+  }
+}
+
+body {
+  background-color: var(--bg-default);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), color 0.15s ease-in-out;
+}
+
+/* Custom pulsing animation for buttons */
+@keyframes yellow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(254, 214, 0, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(254, 214, 0, 0);
+  }
+}
+
+.pulse-primary {
+  animation: yellow-pulse 2s infinite;
+}
