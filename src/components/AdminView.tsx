@@ -3,16 +3,23 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import QRCode from 'react-qr-code';
-import { Question, LeaderboardRow, LeaderboardInfo, Answer, Player } from '../types';
-import { 
-  fetchQuestions, 
-  fetchLeaderboard, 
-  addQuestion, 
-  updateQuestion, 
-  deleteQuestion, 
-  resetEventData, 
+import React, { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
+import QRCode from "react-qr-code";
+import {
+  Question,
+  LeaderboardRow,
+  LeaderboardInfo,
+  Answer,
+  Player,
+} from "../types";
+import {
+  fetchQuestions,
+  fetchLeaderboard,
+  addQuestion,
+  updateQuestion,
+  deleteQuestion,
+  resetEventData,
   fetchActiveLeaderboardInfo,
   updateActiveLeaderboardStatus,
   fetchAdminPlayersList,
@@ -22,54 +29,68 @@ import {
   subscribeToRealtimeAnswers,
   insertMockCompetitor,
   fetchLeaderboardsSupabase,
-  createLeaderboardSupabase
-} from '../dataService';
-import { 
-  Trophy, 
-  BarChart3, 
-  Users, 
-  HelpCircle, 
-  RefreshCw, 
-  Download, 
-  Plus, 
-  Trash2, 
-  Edit3, 
-  Check, 
-  X, 
-  ChevronDown, 
-  ChevronUp, 
-  Sliders, 
-  Lock, 
-  AlertCircle, 
-  Clock, 
-  Calendar, 
+  createLeaderboardSupabase,
+} from "../dataService";
+import {
+  Trophy,
+  BarChart3,
+  Users,
+  HelpCircle,
+  RefreshCw,
+  Download,
+  Plus,
+  Trash2,
+  Edit3,
+  Check,
+  X,
+  ChevronDown,
+  ChevronUp,
+  Sliders,
+  Lock,
+  AlertCircle,
+  Clock,
+  Calendar,
   Award,
   Menu,
   Sparkles,
-  Database
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+  Database,
+} from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 
 export default function AdminView() {
   // Navigation
-  const [activeTab, setActiveTab] = useState<'leaderboard' | 'stats' | 'players' | 'questions'>('leaderboard');
+  const [activeTab, setActiveTab] = useState<
+    "leaderboard" | "stats" | "players" | "questions"
+  >("leaderboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Selected dynamic leaderboard state
-  const [selectedLeaderboardId, setSelectedLeaderboardId] = useState('00000000-0000-0000-0000-000000000001');
+  const [selectedLeaderboardId, setSelectedLeaderboardId] = useState(
+    "00000000-0000-0000-0000-000000000001",
+  );
   const [leaderboardList, setLeaderboardList] = useState<LeaderboardInfo[]>([]);
   const [showNewBoardModal, setShowNewBoardModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
-  const [newBoardName, setNewBoardName] = useState('');
+  const [newBoardName, setNewBoardName] = useState("");
+  const [newBoardPrizeTitle, setNewBoardPrizeTitle] = useState("");
+  const [newBoardPrizeDescription, setNewBoardPrizeDescription] = useState("");
+  const [newBoardPrizeImageUrl, setNewBoardPrizeImageUrl] = useState("");
+  const [newBoardPrizeSponsor, setNewBoardPrizeSponsor] = useState("");
+  const [newBoardPrizeTopN, setNewBoardPrizeTopN] = useState(1);
+  const [newBoardLogoUrl, setNewBoardLogoUrl] = useState("");
+  const [newBoardBackgroundUrl, setNewBoardBackgroundUrl] = useState("");
   const [creatingBoard, setCreatingBoard] = useState(false);
 
   // DB Data States
   const [questions, setQuestions] = useState<Question[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
-  const [activeLeaderboard, setActiveLeaderboard] = useState<LeaderboardInfo | null>(null);
+  const [activeLeaderboard, setActiveLeaderboard] =
+    useState<LeaderboardInfo | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [playerAnswers, setPlayerAnswers] = useState<Record<string, Answer[]>>({});
-  
+  const [playerAnswers, setPlayerAnswers] = useState<Record<string, Answer[]>>(
+    {},
+  );
+
   // Loading & Refresh states
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -80,37 +101,48 @@ export default function AdminView() {
   const [demoActive, setDemoActive] = useState(isDemoMode());
 
   // Interactive configurations
-  const [prizeTier, setPrizeTier] = useState<'top1' | 'top3'>('top3');
+  const [prizeTier, setPrizeTier] = useState<"top1" | "top3">("top3");
   const [showResetModal, setShowResetModal] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
 
   // Question Form modal state
   const [showQuestionModal, setShowQuestionModal] = useState(false);
-  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(
+    null,
+  );
   const [formData, setFormData] = useState({
-    question: '',
-    option_a: '',
-    option_b: '',
-    option_c: '',
-    option_d: '',
-    correct_option: 'a' as 'a' | 'b' | 'c' | 'd',
+    question: "",
+    option_a: "",
+    option_b: "",
+    option_c: "",
+    option_d: "",
+    correct_option: "a" as "a" | "b" | "c" | "d",
     xp_value: 100,
     time_limit_seconds: 15,
-    order_index: 1
+    order_index: 1,
   });
 
   // Toasts
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+  const showToast = (
+    message: string,
+    type: "success" | "error" | "info" = "success",
+  ) => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ message, type });
     toastTimeoutRef.current = setTimeout(() => setToast(null), 3500);
   };
 
   // Main data loader
-  const loadAllAdminData = async (showRefreshIndicator = false, targetId = selectedLeaderboardId) => {
+  const loadAllAdminData = async (
+    showRefreshIndicator = false,
+    targetId = selectedLeaderboardId,
+  ) => {
     if (showRefreshIndicator) setRefreshing(true);
     try {
       // 0. Fetch list of available leaderboards
@@ -119,7 +151,7 @@ export default function AdminView() {
 
       // Verify the target ID still exists or default to first
       let currentId = targetId;
-      if (boards.length > 0 && !boards.some(b => b.id === targetId)) {
+      if (boards.length > 0 && !boards.some((b) => b.id === targetId)) {
         currentId = boards[0].id;
         setSelectedLeaderboardId(currentId);
       }
@@ -142,12 +174,16 @@ export default function AdminView() {
 
       // Default next order index
       if (!editingQuestionId) {
-        const maxIndex = qList.reduce((max, current) => current.order_index > max ? current.order_index : max, 0);
-        setFormData(prev => ({ ...prev, order_index: maxIndex + 1 }));
+        const maxIndex = qList.reduce(
+          (max, current) =>
+            current.order_index > max ? current.order_index : max,
+          0,
+        );
+        setFormData((prev) => ({ ...prev, order_index: maxIndex + 1 }));
       }
     } catch (err: any) {
       console.error(err);
-      showToast('Error al cargar datos del servidor', 'error');
+      showToast("Error al cargar datos del servidor", "error");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -166,7 +202,7 @@ export default function AdminView() {
     // Supabase / Simulated Realtime PG subscription
     const unsubscribe = subscribeToRealtimeAnswers(() => {
       loadAllAdminData(false, selectedLeaderboardId);
-      showToast('¡Leaderboard actualizado en tiempo real!', 'info');
+      showToast("¡Leaderboard actualizado en tiempo real!", "info");
     });
 
     return () => {
@@ -181,8 +217,13 @@ export default function AdminView() {
     setDemoActive(val);
     setDemoMode(val);
     setLoading(true);
-    setSelectedLeaderboardId('00000000-0000-0000-0000-000000000001');
-    showToast(val ? 'Cambiado a modo de Prueba Local offline' : 'Cambiado a conexión de Supabase en vivo', 'info');
+    setSelectedLeaderboardId("00000000-0000-0000-0000-000000000001");
+    showToast(
+      val
+        ? "Cambiado a modo de Prueba Local offline"
+        : "Cambiado a conexión de Supabase en vivo",
+      "info",
+    );
   };
 
   // Tab navigation content selector
@@ -196,27 +237,38 @@ export default function AdminView() {
     try {
       const ok = await resetEventData(selectedLeaderboardId);
       if (ok) {
-        showToast('¡Dinámica reiniciada! Se eliminaron los jugadores y respuestas asociadas.', 'success');
+        showToast(
+          "¡Dinámica reiniciada! Se eliminaron los jugadores y respuestas asociadas.",
+          "success",
+        );
         setPlayerAnswers({});
         setExpandedPlayerId(null);
         loadAllAdminData(false, selectedLeaderboardId);
       } else {
-        showToast('Ocurrió un error al limpiar el leaderboard.', 'error');
+        showToast("Ocurrió un error al limpiar el leaderboard.", "error");
       }
     } catch (err) {
-      showToast('Error durante la solicitud de limpieza.', 'error');
+      showToast("Error durante la solicitud de limpieza.", "error");
     } finally {
       setShowResetModal(false);
     }
   };
 
   // Toggle active leaderboard status: draft / active / finished
-  const handleUpdateStatus = async (status: 'draft' | 'active' | 'finished') => {
+  const handleUpdateStatus = async (
+    status: "draft" | "active" | "finished",
+  ) => {
     setStatusUpdating(true);
     try {
-      const ok = await updateActiveLeaderboardStatus(status, selectedLeaderboardId);
+      const ok = await updateActiveLeaderboardStatus(
+        status,
+        selectedLeaderboardId,
+      );
       if (ok) {
-        showToast(`Estado de la dinámica cambiado a: ${status.toUpperCase()}`, 'success');
+        showToast(
+          `Estado de la dinámica cambiado a: ${status.toUpperCase()}`,
+          "success",
+        );
         if (activeLeaderboard) {
           setActiveLeaderboard({ ...activeLeaderboard, status: status as any });
         }
@@ -224,10 +276,13 @@ export default function AdminView() {
         const boards = await fetchLeaderboardsSupabase();
         setLeaderboardList(boards);
       } else {
-        showToast('Error al actualizar el estado en la base de datos.', 'error');
+        showToast(
+          "Error al actualizar el estado en la base de datos.",
+          "error",
+        );
       }
     } catch (err) {
-      showToast('Error al enviar actualización de estado.', 'error');
+      showToast("Error al enviar actualización de estado.", "error");
     } finally {
       setStatusUpdating(false);
     }
@@ -239,16 +294,22 @@ export default function AdminView() {
       setExpandedPlayerId(null);
       return;
     }
-    
+
     setExpandedPlayerId(playerId);
 
     if (!playerAnswers[playerId]) {
       setLoadingDetailId(playerId);
       try {
-        const details = await fetchPlayerAnswersDetail(playerId, selectedLeaderboardId);
-        setPlayerAnswers(prev => ({ ...prev, [playerId]: details }));
+        const details = await fetchPlayerAnswersDetail(
+          playerId,
+          selectedLeaderboardId,
+        );
+        setPlayerAnswers((prev) => ({ ...prev, [playerId]: details }));
       } catch (err) {
-        showToast('No se pudieron recuperar las respuestas del jugador.', 'error');
+        showToast(
+          "No se pudieron recuperar las respuestas del jugador.",
+          "error",
+        );
       } finally {
         setLoadingDetailId(null);
       }
@@ -258,37 +319,44 @@ export default function AdminView() {
   // Save (Add or Update) Question
   const handleSaveQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.question.trim() || !formData.option_a.trim() || !formData.option_b.trim()) {
-      showToast('Por favor diligencie la pregunta y las opciones principales.', 'error');
+    if (
+      !formData.question.trim() ||
+      !formData.option_a.trim() ||
+      !formData.option_b.trim()
+    ) {
+      showToast(
+        "Por favor diligencie la pregunta y las opciones principales.",
+        "error",
+      );
       return;
     }
 
     try {
       if (editingQuestionId) {
         await updateQuestion(editingQuestionId, formData);
-        showToast('¡Pregunta actualizada con éxito!', 'success');
+        showToast("¡Pregunta actualizada con éxito!", "success");
       } else {
         await addQuestion(formData, selectedLeaderboardId);
-        showToast('¡Nueva pregunta agregada con éxito!', 'success');
+        showToast("¡Nueva pregunta agregada con éxito!", "success");
       }
-      
+
       // Close modal & reset form
       setShowQuestionModal(false);
       setEditingQuestionId(null);
       setFormData({
-        question: '',
-        option_a: '',
-        option_b: '',
-        option_c: '',
-        option_d: '',
-        correct_option: 'a',
+        question: "",
+        option_a: "",
+        option_b: "",
+        option_c: "",
+        option_d: "",
+        correct_option: "a",
         xp_value: 100,
         time_limit_seconds: 15,
-        order_index: questions.length + 1
+        order_index: questions.length + 1,
       });
       loadAllAdminData(false, selectedLeaderboardId);
     } catch (err) {
-      showToast('Ocurrió un problema al guardar la pregunta.', 'error');
+      showToast("Ocurrió un problema al guardar la pregunta.", "error");
     }
   };
 
@@ -304,124 +372,182 @@ export default function AdminView() {
       correct_option: q.correct_option,
       xp_value: q.xp_value,
       time_limit_seconds: q.time_limit_seconds || 15,
-      order_index: q.order_index
+      order_index: q.order_index,
     });
     setShowQuestionModal(true);
   };
 
   // Delete question confirm
   const handleDeleteQuestion = async (id: string, text: string) => {
-    if (!confirm(`¿Está seguro de que desea eliminar la pregunta:\n"${text}"?`)) return;
+    if (!confirm(`¿Está seguro de que desea eliminar la pregunta:\n"${text}"?`))
+      return;
     try {
       const ok = await deleteQuestion(id);
       if (ok) {
-        showToast('Pregunta eliminada de la base de datos.', 'success');
+        showToast("Pregunta eliminada de la base de datos.", "success");
         loadAllAdminData(false, selectedLeaderboardId);
       } else {
-        showToast('Error al suprimir la pregunta.', 'error');
+        showToast("Error al suprimir la pregunta.", "error");
       }
     } catch (err) {
-      showToast('Error al solicitar supresión.', 'error');
+      showToast("Error al solicitar supresión.", "error");
     }
   };
 
   // Download Winners CSV
   const handleExportCSV = () => {
-    const limit = prizeTier === 'top1' ? 1 : 3;
+    const limit = prizeTier === "top1" ? 1 : 3;
     const winners = leaderboard.slice(0, limit);
     if (winners.length === 0) {
-      showToast('No hay ganadores registrados que exportar.', 'error');
+      showToast("No hay ganadores registrados que exportar.", "error");
       return;
     }
 
-    const headers = 'posicion,nombre,total_xp,correct_answers\n';
-    const rows = winners.map(w => `${w.rank},"${w.name.replace(/"/g, '""')}",${w.total_xp},${w.correct_answers}`).join('\n');
-    
-    const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
+    const headers = "posicion,nombre,total_xp,correct_answers\n";
+    const rows = winners
+      .map(
+        (w) =>
+          `${w.rank},"${w.name.replace(/"/g, '""')}",${w.total_xp},${w.correct_answers}`,
+      )
+      .join("\n");
+
+    const blob = new Blob([headers + rows], {
+      type: "text/csv;charset=utf-8;",
+    });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.setAttribute('download', `ganadores_trivia_${prizeTier}.csv`);
+    link.setAttribute("download", `ganadores_trivia_${prizeTier}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast('¡Archivo CSV de ganadores exportado correctamente!');
+    showToast("¡Archivo CSV de ganadores exportado correctamente!");
   };
 
   // Quick insert mock simulator player for testing
   const handleAddMockPlayer = () => {
-    const mockNames = ['Diana Prince', 'Bruce Wayne', 'Clark Kent', 'Tony Stark', 'Steve Rogers', 'Peter Parker', 'Wanda Maximoff', 'Natasha Romanoff'];
-    const randomName = mockNames[Math.floor(Math.random() * mockNames.length)] + ` #${Math.floor(Math.random() * 900 + 100)}`;
-    insertMockCompetitor(randomName, 0.4 + Math.random() * 0.6, selectedLeaderboardId);
+    const mockNames = [
+      "Diana Prince",
+      "Bruce Wayne",
+      "Clark Kent",
+      "Tony Stark",
+      "Steve Rogers",
+      "Peter Parker",
+      "Wanda Maximoff",
+      "Natasha Romanoff",
+    ];
+    const randomName =
+      mockNames[Math.floor(Math.random() * mockNames.length)] +
+      ` #${Math.floor(Math.random() * 900 + 100)}`;
+    insertMockCompetitor(
+      randomName,
+      0.4 + Math.random() * 0.6,
+      selectedLeaderboardId,
+    );
     loadAllAdminData(false, selectedLeaderboardId);
-    showToast(`Simulador: Agregado jugador de prueba "${randomName}" con respuestas automáticas.`);
+    showToast(
+      `Simulador: Agregado jugador de prueba "${randomName}" con respuestas automáticas.`,
+    );
   };
 
   // Handle new leaderboard creation
   const handleCreateLeaderboard = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newBoardName.trim()) {
-      showToast('Por favor ingrese un nombre para el evento de trivia.', 'error');
+      showToast(
+        "Por favor ingrese un nombre para el evento de trivia.",
+        "error",
+      );
       return;
     }
     setCreatingBoard(true);
     try {
-      const board = await createLeaderboardSupabase(newBoardName, 'Creado desde el panel de control admin');
-      showToast(`¡Trivia "${board.name}" creada con éxito!`, 'success');
+      const board = await createLeaderboardSupabase(
+        newBoardName,
+        "Creado desde el panel de control admin",
+        newBoardPrizeTitle,
+        newBoardPrizeDescription,
+        newBoardPrizeImageUrl,
+        newBoardPrizeSponsor,
+        newBoardPrizeTopN,
+        newBoardLogoUrl,
+        newBoardBackgroundUrl
+      );
+      showToast(`¡Trivia "${board.name}" creada con éxito!`, "success");
       setShowNewBoardModal(false);
-      setNewBoardName('');
-      
+      setNewBoardName("");
+      setNewBoardPrizeTitle("");
+      setNewBoardPrizeDescription("");
+      setNewBoardPrizeImageUrl("");
+      setNewBoardPrizeSponsor("");
+      setNewBoardPrizeTopN(1);
+      setNewBoardLogoUrl("");
+      setNewBoardBackgroundUrl("");
+
       // Update list and select this new board
       const boards = await fetchLeaderboardsSupabase();
       setLeaderboardList(boards);
       setSelectedLeaderboardId(board.id);
-      
+
       // Load newly created dynamic's questions, players, and states
       loadAllAdminData(false, board.id);
     } catch (err: any) {
       console.error(err);
-      const errMsg = err?.message || err?.details || 'Ocurrió un error al crear la nueva dinámica.';
-      showToast(`Error: ${errMsg}`, 'error');
+      const errMsg =
+        err?.message ||
+        err?.details ||
+        "Ocurrió un error al crear la nueva dinámica.";
+      showToast(`Error: ${errMsg}`, "error");
     } finally {
       setCreatingBoard(false);
     }
   };
 
   const formatTimestamp = (isoString?: string) => {
-    if (!isoString) return '--:--';
+    if (!isoString) return "--:--";
     const d = new Date(isoString);
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return d.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
   };
 
   // Metric computations for Stats section
   const computedStats = {
     totalPlayers: players.length,
-    totalAnswers: leaderboard.reduce((acc, r) => acc + (r.total_answers || 0), 0),
+    totalAnswers: leaderboard.reduce(
+      (acc, r) => acc + (r.total_answers || 0),
+      0,
+    ),
     completionPercentage: (() => {
       const totalQuestionsCount = questions.length;
       if (totalQuestionsCount === 0 || players.length === 0) return 0;
-      const finishedCount = leaderboard.filter(r => r.total_answers >= totalQuestionsCount).length;
+      const finishedCount = leaderboard.filter(
+        (r) => r.total_answers >= totalQuestionsCount,
+      ).length;
       return Math.round((finishedCount / players.length) * 100);
     })(),
     averageXP: (() => {
       if (leaderboard.length === 0) return 0;
       const sum = leaderboard.reduce((acc, r) => acc + (r.total_xp || 0), 0);
       return Math.round(sum / leaderboard.length);
-    })()
+    })(),
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-brand-dark flex flex-col items-center justify-center text-brand-light p-6">
         <RefreshCw className="w-12 h-12 text-brand-yellow animate-spin mb-4" />
-        <p className="text-sm font-mono text-neutral-400">Iniciando panel administrativo...</p>
+        <p className="text-sm font-mono text-neutral-400">
+          Iniciando panel administrativo...
+        </p>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-brand-dark text-brand-light flex flex-col md:flex-row relative">
-
       {/* TOAST SYSTEM */}
       <AnimatePresence>
         {toast && (
@@ -430,11 +556,11 @@ export default function AdminView() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3.5 rounded-2xl border text-xs font-bold shadow-2xl ${
-              toast.type === 'error'
-                ? 'bg-red-900/90 border-red-500 text-red-200'
-                : toast.type === 'info'
-                  ? 'bg-neutral-900/90 border-brand-yellow/50 text-brand-yellow'
-                  : 'bg-bg-elevated border-emerald-500 text-emerald-400'
+              toast.type === "error"
+                ? "bg-red-900/90 border-red-500 text-red-200"
+                : toast.type === "info"
+                  ? "bg-neutral-900/90 border-brand-yellow/50 text-brand-yellow"
+                  : "bg-bg-elevated border-emerald-500 text-emerald-400"
             }`}
           >
             <Sparkles className="w-4 h-4 shrink-0" />
@@ -449,7 +575,9 @@ export default function AdminView() {
           <div className="w-8 h-8 rounded-lg bg-brand-yellow flex items-center justify-center text-[#111211] font-black text-sm">
             T
           </div>
-          <span className="font-display font-extrabold text-sm tracking-tight">TRIVIA CONTROL</span>
+          <span className="font-display font-extrabold text-sm tracking-tight">
+            TRIVIA CONTROL
+          </span>
         </div>
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -461,9 +589,9 @@ export default function AdminView() {
       </div>
 
       {/* SIDEBAR NAVIGATION */}
-      <aside 
+      <aside
         className={`fixed md:sticky top-0 left-0 h-screen w-64 border-r border-border-default bg-bg-subtle p-5 flex flex-col justify-between shrink-0 transition-transform duration-300 z-30 md:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="space-y-4">
@@ -482,6 +610,13 @@ export default function AdminView() {
             </div>
           </div>
 
+          <Link
+            to="/"
+            className="flex items-center justify-center gap-1.5 w-full py-2 bg-neutral-900 border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800 text-xs font-bold text-text-secondary hover:text-white rounded-xl transition-colors cursor-pointer"
+          >
+            ← Volver al Portal
+          </Link>
+
           {/* SELECCIÓN DE TRIVIA / LEADERBOARD */}
           <div className="bg-bg-elevated/40 border border-border-default/80 rounded-2xl p-3 space-y-2 shadow-sm">
             <div className="flex items-center justify-between">
@@ -491,7 +626,7 @@ export default function AdminView() {
               </span>
               <button
                 onClick={() => {
-                  setNewBoardName('');
+                  setNewBoardName("");
                   setShowNewBoardModal(true);
                 }}
                 className="p-1.5 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-brand-yellow/50 rounded-lg text-brand-yellow hover:scale-105 transition-all cursor-pointer shadow"
@@ -510,9 +645,13 @@ export default function AdminView() {
                 }}
                 className="w-full bg-bg-subtle hover:bg-bg-elevated/85 border border-border-default hover:border-brand-yellow/35 rounded-xl p-2.5 text-[11px] font-bold text-brand-light pr-7 focus:outline-none focus:border-brand-yellow cursor-pointer appearance-none transition-all shadow-inner"
               >
-                {leaderboardList.map(board => (
-                  <option key={board.id} value={board.id} className="bg-neutral-950 font-sans py-2 font-bold text-white text-[11px]">
-                    🏆 {board.name} ({board.status?.toUpperCase() || 'DRAFT'})
+                {leaderboardList.map((board) => (
+                  <option
+                    key={board.id}
+                    value={board.id}
+                    className="bg-neutral-950 font-sans py-2 font-bold text-white text-[11px]"
+                  >
+                    🏆 {board.name} ({board.status?.toUpperCase() || "DRAFT"})
                   </option>
                 ))}
               </select>
@@ -525,19 +664,23 @@ export default function AdminView() {
           {/* Core navigation buttons */}
           <nav className="space-y-1.5" aria-label="Menú principal">
             <button
-              onClick={() => selectTab('leaderboard')}
+              onClick={() => selectTab("leaderboard")}
               className={`w-full py-3 px-4 rounded-2xl flex items-center gap-3 text-xs font-bold transition-all hover:bg-bg-elevated group cursor-pointer ${
-                activeTab === 'leaderboard' ? 'bg-brand-yellow text-[#111211] font-extrabold' : 'text-text-secondary hover:text-brand-light'
+                activeTab === "leaderboard"
+                  ? "bg-brand-yellow text-[#111211] font-extrabold"
+                  : "text-text-secondary hover:text-brand-light"
               }`}
             >
               <Trophy className="w-4 h-4 shrink-0" />
               <span>1. 🏆 Leaderboard</span>
             </button>
-            
+
             <button
-              onClick={() => selectTab('stats')}
+              onClick={() => selectTab("stats")}
               className={`w-full py-3 px-4 rounded-2xl flex items-center gap-3 text-xs font-bold transition-all hover:bg-bg-elevated group cursor-pointer ${
-                activeTab === 'stats' ? 'bg-brand-yellow text-[#111211] font-extrabold' : 'text-text-secondary hover:text-brand-light'
+                activeTab === "stats"
+                  ? "bg-brand-yellow text-[#111211] font-extrabold"
+                  : "text-text-secondary hover:text-brand-light"
               }`}
             >
               <BarChart3 className="w-4 h-4 shrink-0" />
@@ -545,9 +688,11 @@ export default function AdminView() {
             </button>
 
             <button
-              onClick={() => selectTab('players')}
+              onClick={() => selectTab("players")}
               className={`w-full py-3 px-4 rounded-2xl flex items-center gap-3 text-xs font-bold transition-all hover:bg-bg-elevated group cursor-pointer ${
-                activeTab === 'players' ? 'bg-brand-yellow text-[#111211] font-extrabold' : 'text-text-secondary hover:text-brand-light'
+                activeTab === "players"
+                  ? "bg-brand-yellow text-[#111211] font-extrabold"
+                  : "text-text-secondary hover:text-brand-light"
               }`}
             >
               <Users className="w-4 h-4 shrink-0" />
@@ -555,9 +700,11 @@ export default function AdminView() {
             </button>
 
             <button
-              onClick={() => selectTab('questions')}
+              onClick={() => selectTab("questions")}
               className={`w-full py-3 px-4 rounded-2xl flex items-center gap-3 text-xs font-bold transition-all hover:bg-bg-elevated group cursor-pointer ${
-                activeTab === 'questions' ? 'bg-brand-yellow text-[#111211] font-extrabold' : 'text-text-secondary hover:text-brand-light'
+                activeTab === "questions"
+                  ? "bg-brand-yellow text-[#111211] font-extrabold"
+                  : "text-text-secondary hover:text-brand-light"
               }`}
             >
               <HelpCircle className="w-4 h-4 shrink-0" />
@@ -569,13 +716,12 @@ export default function AdminView() {
         {/* Dynamic Database configuration at base */}
         <div className="space-y-4 pt-4 border-t border-border-default text-xs">
           {/* Quick simulator tester block */}
-          <button 
+          <button
             onClick={handleAddMockPlayer}
             className="w-full py-2.5 px-3 border border-dashed border-brand-yellow/40 hover:border-brand-yellow/85 rounded-xl text-brand-yellow text-[11px] font-bold text-center bg-brand-yellow/5 hover:bg-brand-yellow/10 transition-all cursor-pointer flex items-center justify-center gap-1.5"
             title="Suma un competidor simulado que responde aleatoriamente."
           >
-            <Sparkles className="w-3.5 h-3.5" />
-            + Competidor Demo
+            <Sparkles className="w-3.5 h-3.5" />+ Competidor Demo
           </button>
 
           <div className="bg-bg-elevated rounded-2xl p-3 space-y-2 border border-border-default/60">
@@ -583,18 +729,22 @@ export default function AdminView() {
               Bases de Datos conectada
             </span>
             <div className="flex gap-1 bg-bg-subtle p-1 rounded-xl">
-              <button 
+              <button
                 onClick={() => handleToggleDemo(true)}
                 className={`flex-1 py-1 px-1.5 rounded-lg text-[9px] font-bold text-center transition-all cursor-pointer ${
-                  demoActive ? 'bg-brand-yellow text-[#111211]' : 'text-text-secondary hover:text-brand-light'
+                  demoActive
+                    ? "bg-brand-yellow text-[#111211]"
+                    : "text-text-secondary hover:text-brand-light"
                 }`}
               >
                 Local
               </button>
-              <button 
+              <button
                 onClick={() => handleToggleDemo(false)}
                 className={`flex-1 py-1 px-1.5 rounded-lg text-[9px] font-bold text-center transition-all cursor-pointer ${
-                  !demoActive ? 'bg-brand-yellow text-[#111211] font-bold' : 'text-text-secondary hover:text-brand-light'
+                  !demoActive
+                    ? "bg-brand-yellow text-[#111211] font-bold"
+                    : "text-text-secondary hover:text-brand-light"
                 }`}
               >
                 Supabase
@@ -606,7 +756,7 @@ export default function AdminView() {
 
       {/* MOBILE OVERLAY FOR SIDEBAR */}
       {sidebarOpen && (
-        <div 
+        <div
           onClick={() => setSidebarOpen(false)}
           className="md:hidden fixed inset-0 bg-neutral-950/80 backdrop-blur-sm z-20"
         />
@@ -614,7 +764,6 @@ export default function AdminView() {
 
       {/* MAIN VIEW AREA */}
       <main className="flex-1 min-w-0 p-4 lg:p-8 space-y-6 md:h-screen md:overflow-y-auto">
-
         {/* FIXED HEADER BAR */}
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-default/60 pb-6">
           <div className="space-y-1">
@@ -623,46 +772,51 @@ export default function AdminView() {
               <span>Dinámica y Evento Activo</span>
             </div>
             <h1 className="text-xl lg:text-3xl font-display font-extrabold tracking-tight text-brand-light flex items-center gap-2">
-              🏆 {activeLeaderboard ? activeLeaderboard.name : 'Trivia Event Principal'}
+              🏆{" "}
+              {activeLeaderboard
+                ? activeLeaderboard.name
+                : "Trivia Event Principal"}
             </h1>
           </div>
 
           <div className="flex flex-row flex-wrap items-center gap-3">
             {/* Status indicators */}
             <div className="flex items-center gap-1.5 bg-bg-subtle border border-border-default/80 px-2 py-1.5 rounded-2xl text-xs font-bold leading-none">
-              <span className="text-[10px] text-text-secondary uppercase pl-1.5">Estado:</span>
-              
-              <button 
-                onClick={() => handleUpdateStatus('draft')}
+              <span className="text-[10px] text-text-secondary uppercase pl-1.5">
+                Estado:
+              </span>
+
+              <button
+                onClick={() => handleUpdateStatus("draft")}
                 disabled={statusUpdating}
                 className={`px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
-                  activeLeaderboard?.status === 'draft' 
-                    ? 'bg-neutral-600 text-white font-extrabold shadow' 
-                    : 'text-text-secondary hover:text-brand-light hover:bg-neutral-800'
+                  activeLeaderboard?.status === "draft"
+                    ? "bg-neutral-600 text-white font-extrabold shadow"
+                    : "text-text-secondary hover:text-brand-light hover:bg-neutral-800"
                 }`}
               >
                 Draft
               </button>
 
-              <button 
-                onClick={() => handleUpdateStatus('active')}
+              <button
+                onClick={() => handleUpdateStatus("active")}
                 disabled={statusUpdating}
                 className={`px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
-                  activeLeaderboard?.status === 'active' 
-                    ? 'bg-emerald-600 text-white font-extrabold shadow' 
-                    : 'text-text-secondary hover:text-emerald-400 hover:bg-neutral-850'
+                  activeLeaderboard?.status === "active"
+                    ? "bg-emerald-600 text-white font-extrabold shadow"
+                    : "text-text-secondary hover:text-emerald-400 hover:bg-neutral-850"
                 }`}
               >
                 Active
               </button>
 
-              <button 
-                onClick={() => handleUpdateStatus('finished')}
+              <button
+                onClick={() => handleUpdateStatus("finished")}
                 disabled={statusUpdating}
                 className={`px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
-                  activeLeaderboard?.status === 'finished' 
-                    ? 'bg-red-700/50 border border-red-500 text-red-100 font-extrabold shadow' 
-                    : 'text-text-secondary hover:text-red-450 hover:bg-neutral-850'
+                  activeLeaderboard?.status === "finished"
+                    ? "bg-red-700/50 border border-red-500 text-red-100 font-extrabold shadow"
+                    : "text-text-secondary hover:text-red-450 hover:bg-neutral-850"
                 }`}
               >
                 Finished
@@ -675,7 +829,9 @@ export default function AdminView() {
               className="p-3 bg-bg-subtle hover:bg-bg-elevated rounded-2xl border border-border-default text-text-secondary hover:text-brand-light transition-all cursor-pointer flex items-center justify-center shrink-0"
               title="Refrescar datos de la base de datos de inmediato"
             >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-brand-yellow' : ''}`} />
+              <RefreshCw
+                className={`w-4 h-4 ${refreshing ? "animate-spin text-brand-yellow" : ""}`}
+              />
             </button>
 
             <button
@@ -691,9 +847,8 @@ export default function AdminView() {
 
         {/* SECTOR RENDER BASED ON TAB */}
         <AnimatePresence mode="wait">
-          
           {/* TAB 1:🏆 LEADERBOARD */}
-          {activeTab === 'leaderboard' && (
+          {activeTab === "leaderboard" && (
             <motion.section
               key="tab-leaderboard font-medium"
               initial={{ opacity: 0, y: 15 }}
@@ -709,7 +864,8 @@ export default function AdminView() {
                       <span>Tabla de Resultados en Tiempo Real</span>
                     </h2>
                     <p className="text-xs text-text-secondary">
-                      Sincronizado instantáneamente con las respuestas enviadas por los participantes.
+                      Sincronizado instantáneamente con las respuestas enviadas
+                      por los participantes.
                     </p>
                   </div>
                   <div className="flex flex-col gap-2 shrink-0">
@@ -719,21 +875,29 @@ export default function AdminView() {
                         <span className="block text-[10px] text-text-secondary font-mono tracking-wider mb-1">
                           ENLACE PARA JUGADORES:
                         </span>
-                        <a href={`${window.location.origin}/#/play/${selectedLeaderboardId}`} target="_blank" rel="noreferrer" className="text-xs text-brand-yellow font-bold hover:underline break-all" title="Ir a la trivia">
-                          {`${window.location.origin}/#/play/${selectedLeaderboardId}`}
+                        <a
+                          href={`https://jancna.github.io/trivia-event-temp/#/play/${selectedLeaderboardId}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-brand-yellow font-bold hover:underline break-all"
+                          title="Ir a la trivia"
+                        >
+                          {`https://jancna.github.io/trivia-event-temp/#/play/${selectedLeaderboardId}`}
                         </a>
                       </div>
                       <div className="flex flex-col gap-1.5 shrink-0">
-                        <button 
+                        <button
                           onClick={() => {
-                            navigator.clipboard.writeText(`${window.location.origin}/#/play/${selectedLeaderboardId}`);
-                            showToast('Enlace de jugador copiado');
+                            navigator.clipboard.writeText(
+                              `https://jancna.github.io/trivia-event-temp/#/play/${selectedLeaderboardId}`,
+                            );
+                            showToast("Enlace de jugador copiado");
                           }}
                           className="w-full px-3 py-1.5 bg-bg-elevated hover:bg-neutral-800 text-[10px] font-bold uppercase tracking-wider text-text-secondary border border-border-default hover:border-brand-yellow rounded-xl transition-all cursor-pointer shadow flex items-center justify-center shrink-0"
                         >
                           Copiar URL
                         </button>
-                        <button 
+                        <button
                           onClick={() => setShowQRModal(true)}
                           className="w-full px-3 py-1.5 bg-brand-yellow/10 hover:bg-brand-yellow/20 text-[#fed600] text-[10px] font-bold uppercase tracking-wider border border-brand-yellow/30 hover:border-brand-yellow rounded-xl transition-all cursor-pointer shadow flex items-center justify-center shrink-0"
                         >
@@ -748,14 +912,22 @@ export default function AdminView() {
                         <span className="block text-[10px] text-text-secondary font-mono tracking-wider mb-1">
                           ENLACE LEADERBOARD:
                         </span>
-                        <a href={`${window.location.origin}/#/leaderboard/${selectedLeaderboardId}`} target="_blank" rel="noreferrer" className="text-xs text-brand-yellow font-bold hover:underline break-all" title="Ir al leaderboard público">
-                          {`${window.location.origin}/#/leaderboard/${selectedLeaderboardId}`}
+                        <a
+                          href={`https://jancna.github.io/trivia-event-temp/#/leaderboard/${selectedLeaderboardId}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-brand-yellow font-bold hover:underline break-all"
+                          title="Ir al leaderboard público"
+                        >
+                          {`https://jancna.github.io/trivia-event-temp/#/leaderboard/${selectedLeaderboardId}`}
                         </a>
                       </div>
-                      <button 
+                      <button
                         onClick={() => {
-                          navigator.clipboard.writeText(`${window.location.origin}/#/leaderboard/${selectedLeaderboardId}`);
-                          showToast('Enlace de leaderboard copiado');
+                          navigator.clipboard.writeText(
+                            `https://jancna.github.io/trivia-event-temp/#/leaderboard/${selectedLeaderboardId}`,
+                          );
+                          showToast("Enlace de leaderboard copiado");
                         }}
                         className="px-3 py-1.5 bg-bg-elevated hover:bg-neutral-800 text-xs text-text-secondary border border-border-default hover:border-brand-yellow rounded-xl transition-all cursor-pointer shadow flex items-center justify-center shrink-0"
                       >
@@ -769,19 +941,30 @@ export default function AdminView() {
                   {leaderboard.length === 0 ? (
                     <div className="py-16 text-center text-text-secondary border border-dashed border-border-default rounded-3xl">
                       <Users className="w-10 h-10 mx-auto text-text-secondary mb-3 opacity-50" />
-                      <p className="text-sm font-semibold text-brand-light">Ningún participante registrado</p>
-                      <p className="text-xs mt-1 text-text-secondary">Alienta a los usuarios a registrarse y responder las preguntas.</p>
+                      <p className="text-sm font-semibold text-brand-light">
+                        Ningún participante registrado
+                      </p>
+                      <p className="text-xs mt-1 text-text-secondary">
+                        Alienta a los usuarios a registrarse y responder las
+                        preguntas.
+                      </p>
                     </div>
                   ) : (
                     <table className="w-full text-left text-xs min-w-[600px]">
                       <thead>
                         <tr className="border-b border-border-default text-text-secondary uppercase tracking-widest font-extrabold text-[10px]">
-                          <th className="py-3 px-4 text-center w-16">Posición</th>
+                          <th className="py-3 px-4 text-center w-16">
+                            Posición
+                          </th>
                           <th className="py-3 px-3">Nombre del Participante</th>
-                          <th className="py-3 px-3 text-center">XP Acumulado</th>
+                          <th className="py-3 px-3 text-center">
+                            XP Acumulado
+                          </th>
                           <th className="py-3 px-3 text-center">✓ Correctas</th>
                           <th className="py-3 px-3 text-center">Respondidas</th>
-                          <th className="py-3 px-4 text-center">Última Actividad</th>
+                          <th className="py-3 px-4 text-center">
+                            Última Actividad
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border-default font-semibold text-brand-light/90">
@@ -790,10 +973,16 @@ export default function AdminView() {
                           const isTop2 = row.rank === 2;
                           const isTop3 = row.rank === 3;
                           return (
-                            <tr 
-                              key={row.player_id} 
+                            <tr
+                              key={row.player_id}
                               className={`hover:bg-bg-elevated/35 transition-all ${
-                                isTop1 ? 'bg-amber-500/5' : isTop2 ? 'bg-neutral-300/5' : isTop3 ? 'bg-amber-700/5' : ''
+                                isTop1
+                                  ? "bg-amber-500/5"
+                                  : isTop2
+                                    ? "bg-neutral-300/5"
+                                    : isTop3
+                                      ? "bg-amber-700/5"
+                                      : ""
                               }`}
                             >
                               <td className="py-4 px-4 text-center">
@@ -816,7 +1005,7 @@ export default function AdminView() {
                                 )}
                               </td>
                               <td className="py-4 px-3 font-extrabold text-sm text-brand-light">
-                                {row.name}
+                                {row.player_name && row.player_name.trim() !== '' ? row.player_name : 'Jugador Anónimo'}
                               </td>
                               <td className="py-4 px-3 text-center text-brand-yellow font-bold font-mono text-sm">
                                 {row.total_xp?.toLocaleString() || 0} XP
@@ -850,24 +1039,29 @@ export default function AdminView() {
                       <span>Panel de Premiación y Cierre</span>
                     </h3>
                     <p className="text-xs text-text-secondary">
-                      Selecciona y destaca el ranking de los ganadores de la jornada.
+                      Selecciona y destaca el ranking de los ganadores de la
+                      jornada.
                     </p>
                   </div>
-                  
+
                   {/* Selector of tiers */}
                   <div className="flex items-center gap-1.5 bg-bg-elevated p-1 rounded-xl border border-border-default w-fit text-xs font-semibold">
                     <button
-                      onClick={() => setPrizeTier('top1')}
+                      onClick={() => setPrizeTier("top1")}
                       className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                        prizeTier === 'top1' ? 'bg-brand-yellow text-[#111211] font-bold' : 'text-text-secondary hover:text-brand-light'
+                        prizeTier === "top1"
+                          ? "bg-brand-yellow text-[#111211] font-bold"
+                          : "text-text-secondary hover:text-brand-light"
                       }`}
                     >
                       Premio Top 1
                     </button>
                     <button
-                      onClick={() => setPrizeTier('top3')}
+                      onClick={() => setPrizeTier("top3")}
                       className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                        prizeTier === 'top3' ? 'bg-brand-yellow text-[#111211] font-bold' : 'text-text-secondary hover:text-brand-light'
+                        prizeTier === "top3"
+                          ? "bg-brand-yellow text-[#111211] font-bold"
+                          : "text-text-secondary hover:text-brand-light"
                       }`}
                     >
                       Premio Top 3
@@ -882,43 +1076,55 @@ export default function AdminView() {
                       Registra jugadores para calcular el podio final.
                     </div>
                   ) : (
-                    leaderboard.slice(0, prizeTier === 'top1' ? 1 : 3).map((win, idx) => {
-                      const isFirst = idx === 0;
-                      const isSecond = idx === 1;
-                      const isThird = idx === 2;
-                      return (
-                        <div 
-                          key={win.player_id}
-                          className={`border rounded-2xl p-4 flex flex-col items-center justify-between text-center relative overflow-hidden transition-all ${
-                            isFirst 
-                              ? 'bg-yellow-500/5 border-yellow-500/40 ring-1 ring-yellow-500/20' 
-                              : isSecond 
-                                ? 'bg-zinc-300/5 border-zinc-300/40' 
-                                : 'bg-amber-600/5 border-amber-600/40'
-                          }`}
-                        >
-                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-center text-bg-default font-black text-lg shadow-lg mb-3 ${
-                            isFirst ? 'bg-yellow-500' : isSecond ? 'bg-zinc-300' : 'bg-amber-600 text-white'
-                          }`}>
-                            {idx + 1}
+                    leaderboard
+                      .slice(0, prizeTier === "top1" ? 1 : 3)
+                      .map((win, idx) => {
+                        const isFirst = idx === 0;
+                        const isSecond = idx === 1;
+                        const isThird = idx === 2;
+                        return (
+                          <div
+                            key={win.player_id}
+                            className={`border rounded-2xl p-4 flex flex-col items-center justify-between text-center relative overflow-hidden transition-all ${
+                              isFirst
+                                ? "bg-yellow-500/5 border-yellow-500/40 ring-1 ring-yellow-500/20"
+                                : isSecond
+                                  ? "bg-zinc-300/5 border-zinc-300/40"
+                                  : "bg-amber-600/5 border-amber-600/40"
+                            }`}
+                          >
+                            <div
+                              className={`w-12 h-12 rounded-2xl flex items-center justify-center text-center text-bg-default font-black text-lg shadow-lg mb-3 ${
+                                isFirst
+                                  ? "bg-yellow-500"
+                                  : isSecond
+                                    ? "bg-zinc-300"
+                                    : "bg-amber-600 text-white"
+                              }`}
+                            >
+                              {idx + 1}
+                            </div>
+                            <div className="space-y-1 mb-4">
+                              <span className="text-[10px] font-mono tracking-widest text-text-secondary uppercase">
+                                {idx === 0
+                                  ? "🏆 Ganador de Oro"
+                                  : idx === 1
+                                    ? "🥈 Subcampeón de Plata animate-pulse"
+                                    : "🥉 Bronce"}
+                              </span>
+                              <h4 className="text-sm font-extrabold text-brand-light truncate max-w-[150px]">
+                                {win.player_name}
+                              </h4>
+                              <p className="text-xs font-mono font-bold text-brand-yellow">
+                                {win.total_xp.toLocaleString()} XP
+                              </p>
+                            </div>
+                            <div className="text-[11px] text-text-secondary font-medium">
+                              {win.correct_answers} respuestas correctas
+                            </div>
                           </div>
-                          <div className="space-y-1 mb-4">
-                            <span className="text-[10px] font-mono tracking-widest text-text-secondary uppercase">
-                              {idx === 0 ? '🏆 Ganador de Oro' : idx === 1 ? '🥈 Subcampeón de Plata animate-pulse' : '🥉 Bronce'}
-                            </span>
-                            <h4 className="text-sm font-extrabold text-brand-light truncate max-w-[150px]">
-                              {win.name}
-                            </h4>
-                            <p className="text-xs font-mono font-bold text-brand-yellow">
-                              {win.total_xp.toLocaleString()} XP
-                            </p>
-                          </div>
-                          <div className="text-[11px] text-text-secondary font-medium">
-                            {win.correct_answers} respuestas correctas
-                          </div>
-                        </div>
-                      );
-                    })
+                        );
+                      })
                   )}
                 </div>
 
@@ -937,7 +1143,7 @@ export default function AdminView() {
           )}
 
           {/* TAB 2:📊 ESTADÍSTICAS */}
-          {activeTab === 'stats' && (
+          {activeTab === "stats" && (
             <motion.section
               key="tab-stats"
               initial={{ opacity: 0, y: 15 }}
@@ -947,7 +1153,6 @@ export default function AdminView() {
             >
               {/* STATS BENTO GRID CARDS */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                
                 {/* CARD 1 */}
                 <div className="bg-bg-subtle border border-border-default rounded-3xl p-5 flex flex-col justify-between shadow-lg relative overflow-hidden">
                   <div className="absolute top-4 right-4 w-9 h-9 rounded-xl bg-brand-yellow/10 border border-brand-yellow/20 flex items-center justify-center text-brand-yellow">
@@ -1019,13 +1224,12 @@ export default function AdminView() {
                     Promedio acumulado.
                   </p>
                 </div>
-
               </div>
             </motion.section>
           )}
 
           {/* TAB 3:👥 JUGADORES */}
-          {activeTab === 'players' && (
+          {activeTab === "players" && (
             <motion.section
               key="tab-players"
               initial={{ opacity: 0, y: 15 }}
@@ -1037,10 +1241,13 @@ export default function AdminView() {
                 <div className="border-b border-border-default/60 pb-3">
                   <h2 className="text-md font-display font-bold text-brand-light flex items-center gap-2">
                     <Users className="w-5 h-5 text-brand-yellow" />
-                    <span>Participantes Totales Registrados ({players.length})</span>
+                    <span>
+                      Participantes Totales Registrados ({players.length})
+                    </span>
                   </h2>
                   <p className="text-xs text-text-secondary">
-                    Amplía cada registro para ver el rendimiento por pregunta acumulada.
+                    Amplía cada registro para ver el rendimiento por pregunta
+                    acumulada.
                   </p>
                 </div>
 
@@ -1056,25 +1263,36 @@ export default function AdminView() {
                           <th className="py-3 px-3">Nombre</th>
                           <th className="py-3 px-3 text-center">XP Total</th>
                           <th className="py-3 px-3 text-center">✓ Correctas</th>
-                          <th className="py-3 px-3 text-center">Respondidas / Total</th>
+                          <th className="py-3 px-3 text-center">
+                            Respondidas / Total
+                          </th>
                           <th className="py-3 px-3">Registrado</th>
                           <th className="py-3 px-4 text-right">Acción</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border-default font-semibold text-brand-light">
                         {players.map((plyr) => {
+                          console.log('AdminView: rendering player:', plyr);
                           // Find corresponding summary row from leaderboard calculated values
-                          const summary = leaderboard.find(r => r.player_id === plyr.id);
+                          const summary = leaderboard.find(
+                            (r) => r.player_id === plyr.id,
+                          );
                           const totalXp = summary ? summary.total_xp : 0;
-                          const correctCount = summary ? summary.correct_answers : 0;
-                          const answeredCount = summary ? summary.total_answers : 0;
+                          const correctCount = summary
+                            ? summary.correct_answers
+                            : 0;
+                          const answeredCount = summary
+                            ? summary.total_answers
+                            : 0;
                           const isExpanded = expandedPlayerId === plyr.id;
 
                           return (
                             <React.Fragment key={plyr.id}>
-                              <tr className={`hover:bg-bg-elevated/40 transition-all ${isExpanded ? 'bg-bg-elevated/25' : ''}`}>
+                              <tr
+                                className={`hover:bg-bg-elevated/40 transition-all ${isExpanded ? "bg-bg-elevated/25" : ""}`}
+                              >
                                 <td className="py-3.5 px-3 font-extrabold text-sm text-brand-light">
-                                  {plyr.name}
+                                  {plyr.name && plyr.name.trim() !== '' ? plyr.name : 'Jugador Anónimo'}
                                 </td>
                                 <td className="py-3.5 px-3 text-center font-mono font-bold text-brand-yellow text-sm">
                                   {totalXp.toLocaleString()} XP
@@ -1092,76 +1310,120 @@ export default function AdminView() {
                                 </td>
                                 <td className="py-3.5 px-4 text-right">
                                   <button
-                                    onClick={() => handleTogglePlayerExpand(plyr.id)}
+                                    onClick={() =>
+                                      handleTogglePlayerExpand(plyr.id)
+                                    }
                                     className="px-3 py-1.5 bg-bg-elevated hover:bg-neutral-800 border border-border-default rounded-xl font-bold cursor-pointer transition-all inline-flex items-center gap-1 hover:text-white"
                                   >
                                     <span>Ver detalle</span>
-                                    {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                                    {isExpanded ? (
+                                      <ChevronUp className="w-3.5 h-3.5" />
+                                    ) : (
+                                      <ChevronDown className="w-3.5 h-3.5" />
+                                    )}
                                   </button>
                                 </td>
                               </tr>
-                              
+
                               {/* Expanded answers detail */}
                               <AnimatePresence>
                                 {isExpanded && (
                                   <tr>
-                                    <td colSpan={6} className="bg-bg-elevated/15 px-6 py-4">
+                                    <td
+                                      colSpan={6}
+                                      className="bg-bg-elevated/15 px-6 py-4"
+                                    >
                                       <div className="border border-border-default/80 rounded-2xl bg-bg-subtle p-4 space-y-4 shadow-inner">
                                         <h4 className="text-[10px] uppercase font-bold text-text-secondary font-mono tracking-widest flex items-center gap-1.5 border-b border-border-default/40 pb-2">
                                           <Clock className="w-3.5 h-3.5 text-brand-yellow animate-pulse" />
-                                          <span>Historial de Respuestas Detalladas</span>
+                                          <span>
+                                            Historial de Respuestas Detalladas
+                                          </span>
                                         </h4>
-                                        
+
                                         {loadingDetailId === plyr.id ? (
                                           <div className="py-4 flex justify-center items-center gap-2 text-xs text-text-secondary font-mono">
                                             <RefreshCw className="w-3.5 h-3.5 animate-spin text-brand-yellow" />
-                                            <span>Buscando registros en Supabase...</span>
+                                            <span>
+                                              Buscando registros en Supabase...
+                                            </span>
                                           </div>
-                                        ) : !playerAnswers[plyr.id] || playerAnswers[plyr.id].length === 0 ? (
+                                        ) : !playerAnswers[plyr.id] ||
+                                          playerAnswers[plyr.id].length ===
+                                            0 ? (
                                           <div className="py-4 text-center text-xs text-text-secondary bg-neutral-900/20 rounded-xl">
-                                            El jugador no ha respondido ninguna pregunta de la trivia aún.
+                                            El jugador no ha respondido ninguna
+                                            pregunta de la trivia aún.
                                           </div>
                                         ) : (
                                           <div className="space-y-3.5">
-                                            {playerAnswers[plyr.id].map((ans, aIdx) => {
-                                              // Find corresponding question
-                                              const associatedQ = questions.find(q => q.id === ans.question_id);
-                                              return (
-                                                <div 
-                                                  key={ans.id || aIdx} 
-                                                  className="p-3 bg-bg-elevated border border-border-default/40 rounded-xl hover:border-border-default flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs"
-                                                >
-                                                  <div className="space-y-1">
-                                                    <span className="text-[9px] font-mono bg-bg-subtle text-text-secondary px-1.5 py-0.5 rounded border border-border-default">
-                                                      Pregunta #{aIdx + 1}
-                                                    </span>
-                                                    <p className="font-extrabold text-brand-light text-xs mt-1 leading-relaxed leading-snug">
-                                                      {associatedQ ? associatedQ.question : '¿Pregunta Suprimida del Evento?'}
-                                                    </p>
-                                                    <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[11px] text-text-secondary">
-                                                      <span>Seleccionada: <strong className="uppercase text-brand-yellow font-mono">{ans.selected_option}</strong></span>
-                                                      <span>•</span>
-                                                      <span>Correcta: <strong className="uppercase text-emerald-400 font-mono">{associatedQ ? associatedQ.correct_option : '--'}</strong></span>
+                                            {playerAnswers[plyr.id].map(
+                                              (ans, aIdx) => {
+                                                // Find corresponding question
+                                                const associatedQ =
+                                                  questions.find(
+                                                    (q) =>
+                                                      q.id === ans.question_id,
+                                                  );
+                                                return (
+                                                  <div
+                                                    key={ans.id || aIdx}
+                                                    className="p-3 bg-bg-elevated border border-border-default/40 rounded-xl hover:border-border-default flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs"
+                                                  >
+                                                    <div className="space-y-1">
+                                                      <span className="text-[9px] font-mono bg-bg-subtle text-text-secondary px-1.5 py-0.5 rounded border border-border-default">
+                                                        Pregunta #{aIdx + 1}
+                                                      </span>
+                                                      <p className="font-extrabold text-brand-light text-xs mt-1 leading-relaxed leading-snug">
+                                                        {associatedQ
+                                                          ? associatedQ.question
+                                                          : "¿Pregunta Suprimida del Evento?"}
+                                                      </p>
+                                                      <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[11px] text-text-secondary">
+                                                        <span>
+                                                          Seleccionada:{" "}
+                                                          <strong className="uppercase text-brand-yellow font-mono">
+                                                            {
+                                                              ans.selected_option
+                                                            }
+                                                          </strong>
+                                                        </span>
+                                                        <span>•</span>
+                                                        <span>
+                                                          Correcta:{" "}
+                                                          <strong className="uppercase text-emerald-400 font-mono">
+                                                            {associatedQ
+                                                              ? associatedQ.correct_option
+                                                              : "--"}
+                                                          </strong>
+                                                        </span>
+                                                      </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                                                      <div className="text-right font-mono">
+                                                        <span
+                                                          className={`inline-block px-2.5 py-1 rounded-xl text-[10px] font-bold ${
+                                                            ans.is_correct
+                                                              ? "bg-emerald-950 text-emerald-400 border border-emerald-500/20"
+                                                              : "bg-red-950 text-red-400 border border-red-500/20"
+                                                          }`}
+                                                        >
+                                                          {ans.is_correct
+                                                            ? `+${ans.xp_earned} XP`
+                                                            : "0 XP (Incorrecto)"}
+                                                        </span>
+                                                        <span className="block text-[10px] text-text-secondary opacity-60 mt-0.5">
+                                                          {formatTimestamp(
+                                                            ans.answered_at,
+                                                          )}
+                                                        </span>
+                                                      </div>
                                                     </div>
                                                   </div>
-                                                  
-                                                  <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
-                                                    <div className="text-right font-mono">
-                                                      <span className={`inline-block px-2.5 py-1 rounded-xl text-[10px] font-bold ${
-                                                        ans.is_correct 
-                                                          ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/20' 
-                                                          : 'bg-red-950 text-red-400 border border-red-500/20'
-                                                      }`}>
-                                                        {ans.is_correct ? `+${ans.xp_earned} XP` : '0 XP (Incorrecto)'}
-                                                      </span>
-                                                      <span className="block text-[10px] text-text-secondary opacity-60 mt-0.5">
-                                                        {formatTimestamp(ans.answered_at)}
-                                                      </span>
-                                                    </div>
-                                                  </div>
-                                                </div>
-                                              );
-                                            })}
+                                                );
+                                              },
+                                            )}
                                           </div>
                                         )}
                                       </div>
@@ -1181,7 +1443,7 @@ export default function AdminView() {
           )}
 
           {/* TAB 4:❓ PREGUNTAS */}
-          {activeTab === 'questions' && (
+          {activeTab === "questions" && (
             <motion.section
               key="tab-questions"
               initial={{ opacity: 0, y: 15 }}
@@ -1194,10 +1456,13 @@ export default function AdminView() {
                   <div className="space-y-1">
                     <h2 className="text-md font-display font-bold text-brand-light flex items-center gap-2">
                       <HelpCircle className="w-5 h-5 text-brand-yellow" />
-                      <span>Banco de Preguntas para la Dinámica ({questions.length})</span>
+                      <span>
+                        Banco de Preguntas para la Dinámica ({questions.length})
+                      </span>
                     </h2>
                     <p className="text-xs text-text-secondary">
-                      Administra las preguntas que aparecen secuencialmente en tiempo real para los jugadores.
+                      Administra las preguntas que aparecen secuencialmente en
+                      tiempo real para los jugadores.
                     </p>
                   </div>
 
@@ -1205,15 +1470,15 @@ export default function AdminView() {
                     onClick={() => {
                       setEditingQuestionId(null);
                       setFormData({
-                        question: '',
-                        option_a: '',
-                        option_b: '',
-                        option_c: '',
-                        option_d: '',
-                        correct_option: 'a',
+                        question: "",
+                        option_a: "",
+                        option_b: "",
+                        option_c: "",
+                        option_d: "",
+                        correct_option: "a",
                         xp_value: 100,
                         time_limit_seconds: 15,
-                        order_index: questions.length + 1
+                        order_index: questions.length + 1,
                       });
                       setShowQuestionModal(true);
                     }}
@@ -1228,7 +1493,8 @@ export default function AdminView() {
                 <div className="overflow-x-auto">
                   {questions.length === 0 ? (
                     <div className="py-12 text-center text-text-secondary">
-                      No hay preguntas formuladas para este leaderboard en el momento. Agrega una arriba.
+                      No hay preguntas formuladas para este leaderboard en el
+                      momento. Agrega una arriba.
                     </div>
                   ) : (
                     <table className="w-full text-left text-xs min-w-[800px]">
@@ -1248,17 +1514,32 @@ export default function AdminView() {
                       </thead>
                       <tbody className="divide-y divide-border-default font-semibold text-brand-light">
                         {questions.map((q) => (
-                          <tr key={q.id} className="hover:bg-bg-elevated/40 transition-all">
+                          <tr
+                            key={q.id}
+                            className="hover:bg-bg-elevated/40 transition-all"
+                          >
                             <td className="py-4 px-3 text-center text-text-secondary font-mono">
                               #{q.order_index}
                             </td>
                             <td className="py-4 px-3 font-extrabold text-sm text-brand-light max-w-xs truncate">
                               {q.question}
                             </td>
-                            <td className="py-4 px-3 text-text-secondary max-w-[120px] truncate">{q.option_a}</td>
-                            <td className="py-4 px-3 text-text-secondary max-w-[120px] truncate">{q.option_b}</td>
-                            <td className="py-4 px-3 text-text-secondary max-w-[120px] truncate">{q.option_c || <span className="opacity-30">--</span>}</td>
-                            <td className="py-4 px-3 text-text-secondary max-w-[120px] truncate">{q.option_d || <span className="opacity-30">--</span>}</td>
+                            <td className="py-4 px-3 text-text-secondary max-w-[120px] truncate">
+                              {q.option_a}
+                            </td>
+                            <td className="py-4 px-3 text-text-secondary max-w-[120px] truncate">
+                              {q.option_b}
+                            </td>
+                            <td className="py-4 px-3 text-text-secondary max-w-[120px] truncate">
+                              {q.option_c || (
+                                <span className="opacity-30">--</span>
+                              )}
+                            </td>
+                            <td className="py-4 px-3 text-text-secondary max-w-[120px] truncate">
+                              {q.option_d || (
+                                <span className="opacity-30">--</span>
+                              )}
+                            </td>
                             <td className="py-4 px-3 text-center">
                               <span className="uppercase text-emerald-400 bg-emerald-950 font-bold px-2 py-0.5 rounded border border-emerald-500/20 font-mono">
                                 {q.correct_option}
@@ -1268,7 +1549,9 @@ export default function AdminView() {
                               {q.xp_value}
                             </td>
                             <td className="py-4 px-3 text-center text-text-secondary font-mono">
-                              {q.time_limit_seconds ? `${q.time_limit_seconds}s` : '∞'}
+                              {q.time_limit_seconds
+                                ? `${q.time_limit_seconds}s`
+                                : "∞"}
                             </td>
                             <td className="py-4 px-4 text-right">
                               <div className="flex justify-end gap-2">
@@ -1280,7 +1563,9 @@ export default function AdminView() {
                                   <Edit3 className="w-4 h-4" />
                                 </button>
                                 <button
-                                  onClick={() => handleDeleteQuestion(q.id, q.question)}
+                                  onClick={() =>
+                                    handleDeleteQuestion(q.id, q.question)
+                                  }
                                   className="p-2 bg-red-950/40 hover:bg-red-900 border border-red-950/60 hover:border-red-500 rounded-lg text-red-400 hover:text-white transition-all cursor-pointer"
                                   title="Eliminar pregunta"
                                 >
@@ -1297,9 +1582,7 @@ export default function AdminView() {
               </div>
             </motion.section>
           )}
-
         </AnimatePresence>
-
       </main>
 
       {/* FORM MODAL FOR ADD/EDIT QUESTION */}
@@ -1314,7 +1597,9 @@ export default function AdminView() {
             >
               <div className="flex items-center justify-between border-b border-border-default pb-3">
                 <h3 className="text-md font-display font-extrabold text-brand-light">
-                  {editingQuestionId ? '✏️ Editar Pregunta' : '➕ Agregar Nueva Pregunta'}
+                  {editingQuestionId
+                    ? "✏️ Editar Pregunta"
+                    : "➕ Agregar Nueva Pregunta"}
                 </h3>
                 <button
                   type="button"
@@ -1333,7 +1618,12 @@ export default function AdminView() {
                   <textarea
                     rows={2}
                     value={formData.question}
-                    onChange={(e) => setFormData(prev => ({ ...prev, question: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        question: e.target.value,
+                      }))
+                    }
                     placeholder="Escriba la pregunta aquí..."
                     className="w-full bg-bg-elevated border border-border-default text-brand-light rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-brand-yellow"
                     required
@@ -1348,7 +1638,12 @@ export default function AdminView() {
                     <input
                       type="text"
                       value={formData.option_a}
-                      onChange={(e) => setFormData(prev => ({ ...prev, option_a: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          option_a: e.target.value,
+                        }))
+                      }
                       required
                       placeholder="Opción correcta o incorrecta..."
                       className="w-full bg-bg-elevated border border-border-default text-brand-light rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-brand-yellow"
@@ -1362,7 +1657,12 @@ export default function AdminView() {
                     <input
                       type="text"
                       value={formData.option_b}
-                      onChange={(e) => setFormData(prev => ({ ...prev, option_b: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          option_b: e.target.value,
+                        }))
+                      }
                       required
                       placeholder="Opción incorrecta o correcta..."
                       className="w-full bg-bg-elevated border border-border-default text-brand-light rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-brand-yellow"
@@ -1376,7 +1676,12 @@ export default function AdminView() {
                     <input
                       type="text"
                       value={formData.option_c}
-                      onChange={(e) => setFormData(prev => ({ ...prev, option_c: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          option_c: e.target.value,
+                        }))
+                      }
                       placeholder="Opcional..."
                       className="w-full bg-bg-elevated border border-border-default text-brand-light rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-brand-yellow"
                     />
@@ -1389,7 +1694,12 @@ export default function AdminView() {
                     <input
                       type="text"
                       value={formData.option_d}
-                      onChange={(e) => setFormData(prev => ({ ...prev, option_d: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          option_d: e.target.value,
+                        }))
+                      }
                       placeholder="Opcional..."
                       className="w-full bg-bg-elevated border border-border-default text-brand-light rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-brand-yellow"
                     />
@@ -1403,7 +1713,12 @@ export default function AdminView() {
                     </label>
                     <select
                       value={formData.correct_option}
-                      onChange={(e) => setFormData(prev => ({ ...prev, correct_option: e.target.value as any }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          correct_option: e.target.value as any,
+                        }))
+                      }
                       className="w-full bg-bg-elevated border border-border-default text-brand-light rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-yellow cursor-pointer"
                     >
                       <option value="a">A</option>
@@ -1422,14 +1737,22 @@ export default function AdminView() {
                       value={formData.xp_value}
                       min={10}
                       max={10000}
-                      onChange={(e) => setFormData(prev => ({ ...prev, xp_value: Number(e.target.value) }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          xp_value: Number(e.target.value),
+                        }))
+                      }
                       className="w-full bg-bg-elevated border border-border-default text-brand-light rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-yellow"
                       required
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider block" title="Límite en segundos">
+                    <label
+                      className="text-[10px] text-text-secondary uppercase font-bold tracking-wider block"
+                      title="Límite en segundos"
+                    >
                       Límite Tiempo
                     </label>
                     <input
@@ -1437,7 +1760,12 @@ export default function AdminView() {
                       value={formData.time_limit_seconds}
                       min={5}
                       max={300}
-                      onChange={(e) => setFormData(prev => ({ ...prev, time_limit_seconds: Number(e.target.value) }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          time_limit_seconds: Number(e.target.value),
+                        }))
+                      }
                       className="w-full bg-bg-elevated border border-border-default text-brand-light rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-yellow"
                       required
                     />
@@ -1451,7 +1779,12 @@ export default function AdminView() {
                       type="number"
                       value={formData.order_index}
                       min={1}
-                      onChange={(e) => setFormData(prev => ({ ...prev, order_index: Number(e.target.value) }))}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          order_index: Number(e.target.value),
+                        }))
+                      }
                       className="w-full bg-bg-elevated border border-border-default text-brand-light rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-yellow"
                       required
                     />
@@ -1493,13 +1826,15 @@ export default function AdminView() {
               <div className="w-12 h-12 rounded-full bg-red-950/80 border border-red-500/50 flex flex-col items-center justify-center text-red-500 mx-auto">
                 <AlertCircle className="w-6 h-6 animate-pulse" />
               </div>
-              
+
               <div className="space-y-1.5">
                 <h3 className="text-sm font-display font-bold text-brand-light uppercase tracking-wider">
                   ¿Reiniciar Evento de Trivia?
                 </h3>
                 <p className="text-xs text-text-secondary leading-relaxed">
-                  Esta acción eliminará todos los jugadores registrados y sus respectivas respuestas de la base de datos de esta dinámica. Este paso es irreversible.
+                  Esta acción eliminará todos los jugadores registrados y sus
+                  respectivas respuestas de la base de datos de esta dinámica.
+                  Este paso es irreversible.
                 </p>
               </div>
 
@@ -1537,14 +1872,19 @@ export default function AdminView() {
             >
               <div className="space-y-1.5 text-center">
                 <h3 className="text-sm font-display font-black text-brand-light uppercase tracking-wider flex items-center justify-center gap-2">
-                  <span className="text-xl">✨</span> Crear Nuevo Evento de Trivia
+                  <span className="text-xl">✨</span> Crear Nuevo Evento de
+                  Trivia
                 </h3>
                 <p className="text-xs text-text-secondary leading-relaxed">
-                  Crea una nueva campaña o dinámica independiente con sus propias preguntas, jugadores y leaderboard.
+                  Crea una nueva campaña o dinámica independiente con sus
+                  propias preguntas, jugadores y leaderboard.
                 </p>
               </div>
 
-              <form onSubmit={handleCreateLeaderboard} className="space-y-4 text-left">
+              <form
+                onSubmit={handleCreateLeaderboard}
+                className="space-y-4 text-left"
+              >
                 <div className="space-y-1">
                   <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider block">
                     Nombre del Evento (ej: Trivia Q3, Desafío DevOps)
@@ -1561,6 +1901,100 @@ export default function AdminView() {
                   />
                 </div>
 
+                <div className="space-y-1">
+                  <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider block">
+                    Nombre del Premio
+                  </label>
+                  <input
+                    type="text"
+                    value={newBoardPrizeTitle}
+                    onChange={(e) => setNewBoardPrizeTitle(e.target.value)}
+                    placeholder="ej: iPad Pro"
+                    className="w-full bg-bg-elevated border border-border-default hover:border-brand-yellow/40 text-brand-light placeholder:text-text-secondary/50 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-yellow"
+                    maxLength={100}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider block">
+                    Descripción del Premio
+                  </label>
+                  <input
+                    type="text"
+                    value={newBoardPrizeDescription}
+                    onChange={(e) => setNewBoardPrizeDescription(e.target.value)}
+                    placeholder="ej: El mejor dispositivo para productividad"
+                    className="w-full bg-bg-elevated border border-border-default hover:border-brand-yellow/40 text-brand-light placeholder:text-text-secondary/50 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-yellow"
+                    maxLength={200}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider block">
+                    URL Imagen del Premio
+                  </label>
+                  <input
+                    type="text"
+                    value={newBoardPrizeImageUrl}
+                    onChange={(e) => setNewBoardPrizeImageUrl(e.target.value)}
+                    placeholder="ej: https://..."
+                    className="w-full bg-bg-elevated border border-border-default hover:border-brand-yellow/40 text-brand-light placeholder:text-text-secondary/50 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-yellow"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider block">
+                    Sponsor del Premio
+                  </label>
+                  <input
+                    type="text"
+                    value={newBoardPrizeSponsor}
+                    onChange={(e) => setNewBoardPrizeSponsor(e.target.value)}
+                    placeholder="ej: Empresa X"
+                    className="w-full bg-bg-elevated border border-border-default hover:border-brand-yellow/40 text-brand-light placeholder:text-text-secondary/50 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-yellow"
+                    maxLength={100}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider block">
+                    Top Ganadores (N)
+                  </label>
+                  <input
+                    type="number"
+                    value={newBoardPrizeTopN}
+                    onChange={(e) => setNewBoardPrizeTopN(parseInt(e.target.value))}
+                    min={1}
+                    className="w-full bg-bg-elevated border border-border-default hover:border-brand-yellow/40 text-brand-light placeholder:text-text-secondary/50 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-yellow"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                    <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider block">
+                      URL del Logo
+                    </label>
+                    <input
+                      type="text"
+                      value={newBoardLogoUrl}
+                      onChange={(e) => setNewBoardLogoUrl(e.target.value)}
+                      placeholder="ej: https://..."
+                      className="w-full bg-bg-elevated border border-border-default hover:border-brand-yellow/40 text-brand-light placeholder:text-text-secondary/50 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-yellow"
+                    />
+                </div>
+
+                <div className="space-y-1">
+                    <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider block">
+                      URL Imagen de Fondo
+                    </label>
+                    <input
+                      type="text"
+                      value={newBoardBackgroundUrl}
+                      onChange={(e) => setNewBoardBackgroundUrl(e.target.value)}
+                      placeholder="ej: https://..."
+                      className="w-full bg-bg-elevated border border-border-default hover:border-brand-yellow/40 text-brand-light placeholder:text-text-secondary/50 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-yellow"
+                    />
+                </div>
+
                 <div className="flex gap-3 pt-3">
                   <button
                     type="button"
@@ -1575,7 +2009,7 @@ export default function AdminView() {
                     disabled={creatingBoard}
                     className="flex-1 py-2.5 bg-brand-yellow text-[#111211] rounded-xl font-black cursor-pointer transition-all text-center flex items-center justify-center disabled:opacity-50"
                   >
-                    {creatingBoard ? 'Creando...' : 'Crear & Activar'}
+                    {creatingBoard ? "Creando..." : "Crear & Activar"}
                   </button>
                 </div>
               </form>
@@ -1598,15 +2032,20 @@ export default function AdminView() {
                 Escanea para Jugar
               </h3>
               <p className="text-xs text-text-secondary mb-6 leading-relaxed">
-                Invita a los participantes a escanear este código QR para entrar directamente a la dinámica.
+                Invita a los participantes a escanear este código QR para entrar
+                directamente a la dinámica.
               </p>
 
               <div className="bg-white p-4 rounded-2xl mx-auto inline-block mb-6 shadow-md border-[6px] border-bg-elevated">
-                <QRCode value={`${window.location.origin}/#/play/${selectedLeaderboardId}`} size={200} level="H" />
+                <QRCode
+                  value={`https://jancna.github.io/trivia-event-temp/#/play/${selectedLeaderboardId}`}
+                  size={200}
+                  level="H"
+                />
               </div>
 
               <div className="flex gap-2">
-                <button 
+                <button
                   onClick={() => setShowQRModal(false)}
                   className="flex-1 px-4 py-2.5 bg-bg-elevated hover:bg-neutral-800 text-xs text-text-secondary border border-border-default rounded-xl transition-all cursor-pointer font-bold"
                 >
@@ -1617,7 +2056,6 @@ export default function AdminView() {
           </div>
         )}
       </AnimatePresence>
-
     </div>
   );
 }

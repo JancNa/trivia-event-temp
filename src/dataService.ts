@@ -61,13 +61,14 @@ export function getActiveLeaderboard(): LeaderboardInfo {
   return boards.find(b => b.id === currentId) || boards[0] || DEFAULT_LEADERBOARDS[0];
 }
 
-export function createLeaderboard(name: string): LeaderboardInfo {
+export function createLeaderboard(name: string, prize_title: string = ''): LeaderboardInfo {
   const boards = fetchLeaderboards();
   const newBoard: LeaderboardInfo = {
     id: crypto.randomUUID(),
     name: name.trim() || 'Nuevo Leaderboard',
     status: 'registration',
-    created_at: new Date().toISOString()
+    created_at: new Date().toISOString(),
+    prize_title: prize_title.trim()
   };
   boards.push(newBoard);
   saveLeaderboards(boards);
@@ -299,16 +300,17 @@ export async function fetchLeaderboard(leaderboardId: string = '00000000-0000-00
     const { data: fbData, error: fbError } = await supabase!
       .from('leaderboard')
       .select('*')
+      .eq('leaderboard_id', leaderboardId)
       .order('rank', { ascending: true });
 
     if (fbError) {
-      // Try 'leaderboard_results' fallback but without eq filter
+      // Try 'leaderboard_results' fallback but without eq filter (last resort)
       const { data: fbData2, error: fbError2 } = await supabase!
         .from('leaderboard_results')
         .select('*')
         .order('rank', { ascending: true });
       if (fbError2) throw fbError2;
-      return (fbData2 || []).map((row, idx) => ({ ...row, rank: row.rank || idx + 1 })) as LeaderboardRow[];
+      return (fbData2 || []).map((row, idx) => ({ ...row, rank: row.rank || idx + 1 })).filter(r => r.leaderboard_id === leaderboardId) as LeaderboardRow[];
     }
     
     return (fbData || []).map((row, idx) => ({
@@ -560,6 +562,40 @@ export async function resetEventData(leaderboardId: string = '00000000-0000-0000
   }
 }
 
+export async function finalizePlayerResults(
+  playerId: string,
+  totalXP: number,
+  totalCorrect: number,
+  leaderboardId: string
+): Promise<boolean> {
+  if (isDemoMode()) {
+    // Simulated: just flag player as finished locally
+    return true;
+  }
+
+  try {
+    // In a real database, you might update a 'results' table or 'players' table
+    // For now, ensure we have a record that this player finished with these stats
+    const { error } = await supabase!
+      .from('player_final_results')
+      .upsert({
+        player_id: playerId,
+        leaderboard_id: leaderboardId,
+        total_xp: totalXP,
+        correct_answers: totalCorrect,
+        finished_at: new Date().toISOString()
+      }, {
+        onConflict: 'player_id,leaderboard_id'
+      });
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error finalizing results in Supabase:', error);
+    return false;
+  }
+}
+
 export async function fetchActiveLeaderboardInfo(leaderboardId: string = '00000000-0000-0000-0000-000000000001'): Promise<LeaderboardInfo | null> {
   if (isDemoMode()) {
     const list = fetchLeaderboards();
@@ -700,12 +736,29 @@ export async function fetchLeaderboardsSupabase(): Promise<LeaderboardInfo[]> {
   }
 }
 
-export async function createLeaderboardSupabase(name: string, description: string = ''): Promise<LeaderboardInfo> {
+export async function createLeaderboardSupabase(
+  name: string,
+  description: string = '',
+  prize_title: string = '',
+  prize_description: string = '',
+  prize_image_url: string = '',
+  prize_sponsor: string = '',
+  prize_top_n: number = 1,
+  logo_url: string = '',
+  background_image_url: string = ''
+): Promise<LeaderboardInfo> {
   const newRow: LeaderboardInfo = {
     id: crypto.randomUUID(),
     name: name.trim() || 'Nuevo Evento',
     status: 'draft' as any,
-    created_at: new Date().toISOString()
+    created_at: new Date().toISOString(),
+    prize_title: prize_title.trim(),
+    prize_description: prize_description.trim(),
+    prize_image_url: prize_image_url.trim(),
+    prize_sponsor: prize_sponsor.trim(),
+    prize_top_n: prize_top_n,
+    logo_url: logo_url.trim(),
+    background_image_url: background_image_url.trim()
   };
 
   if (isDemoMode()) {
@@ -725,6 +778,13 @@ export async function createLeaderboardSupabase(name: string, description: strin
         id: newRow.id,
         name: newRow.name,
         description: description || 'Creado desde el panel de control',
+        prize_title: newRow.prize_title,
+        prize_description: newRow.prize_description,
+        prize_image_url: newRow.prize_image_url,
+        prize_sponsor: newRow.prize_sponsor,
+        prize_top_n: newRow.prize_top_n,
+        logo_url: newRow.logo_url,
+        background_image_url: newRow.background_image_url,
         status: 'draft',
         created_at: newRow.created_at
       })
@@ -869,6 +929,7 @@ function calculateSimulatedLeaderboard(leaderboardId: string = '00000000-0000-00
     map[p.id] = {
       player_id: p.id,
       name: p.name,
+      player_name: p.name,
       total_xp: 0,
       correct_answers: 0,
       total_answers: 0,

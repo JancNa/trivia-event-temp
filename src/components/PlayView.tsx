@@ -12,8 +12,10 @@ import {
   fetchLeaderboard,
   fetchLeaderboardsSupabase,
   fetchActiveLeaderboardInfo,
+  finalizePlayerResults,
   isDemoMode
 } from '../dataService';
+import { supabase } from '../supabase';
 import { 
   User, 
   Award, 
@@ -62,6 +64,7 @@ export default function PlayView() {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selectedOpt, setSelectedOpt] = useState<'a' | 'b' | 'c' | 'd' | null>(null);
   const [feedback, setFeedback] = useState<{ isCorrect: boolean; xpEarned: number } | null>(null);
+  const answersToSaveRef = useRef<Answer[]>([]);
   
   // Real-time Timer states
   const [timeLeft, setTimeLeft] = useState<number>(0);
@@ -111,54 +114,15 @@ export default function PlayView() {
         const qList = await fetchQuestions(playLeaderboardId);
         setQuestions(qList);
 
-        if (storedId) {
-          const cachedName = localStorage.getItem(`trivia_player_name_${playLeaderboardId}`) || 'Jugador Registrado';
-          const restoredPlayer: Player = {
-            id: storedId,
-            name: cachedName,
-            created_at: new Date().toISOString(),
-            leaderboard_id: playLeaderboardId
-          };
-          setPlayer(restoredPlayer);
-
-          if (board && board.status === 'results') {
-            setScreen('results');
-            loadRanking(storedId, playLeaderboardId);
-          } else if (board && board.status === 'registration') {
-            setScreen('registration');
-          } else {
-            // Check resume
-            const answeredData = localStorage.getItem(`trivia_answers_${storedId}_${playLeaderboardId}`);
-            if (answeredData) {
-              const parsedAnswers = JSON.parse(answeredData) as Answer[];
-              setPlayerAnswers(parsedAnswers);
-              
-              const calculatedXP = parsedAnswers.reduce((acc, curr) => acc + curr.xp_earned, 0);
-              const calculatedCorrect = parsedAnswers.filter(a => a.is_correct).length;
-              setTotalXP(calculatedXP);
-              setTotalCorrect(calculatedCorrect);
-
-              if (parsedAnswers.length >= qList.length && qList.length > 0) {
-                setScreen('results');
-                loadRanking(storedId, playLeaderboardId);
-              } else {
-                setCurrentIdx(parsedAnswers.length);
-                setScreen('trivia');
-              }
-            } else {
-              setScreen('trivia');
-            }
-          }
-        } else {
-          setPlayer(null);
-          setScreen('registration');
-        }
+        setPlayer(null);
+        setScreen('registration');
       } catch (err) {
         console.error('Error in initial play setup:', err);
       } finally {
         setLoading(false);
       }
     }
+    console.log('PlayView: running initial load for playLeaderboardId', playLeaderboardId);
     loadInitial();
   }, [playLeaderboardId]);
 
@@ -268,33 +232,53 @@ export default function PlayView() {
     setSelectedOpt(option);
     setFeedback({ isCorrect, xpEarned: xp });
 
-    try {
-      const ansObj = await submitAnswer(player.id, currentQ.id, option || 'a', isCorrect, xp, playLeaderboardId);
+    // Store temporarily
+    answersToSaveRef.current.push({
+      id: crypto.randomUUID(),
+      player_id: player.id,
+      question_id: currentQ.id,
+      selected_option: option || 'a',
+      is_correct: isCorrect,
+      xp_earned: xp,
+      answered_at: new Date().toISOString(),
+      leaderboard_id: playLeaderboardId
+    });
 
-      const currentLocalAnswers = [...playerAnswers, ansObj];
-      setPlayerAnswers(currentLocalAnswers);
-      localStorage.setItem(`trivia_answers_${player.id}_${playLeaderboardId}`, JSON.stringify(currentLocalAnswers));
+    setTotalXP((prev) => prev + xp);
+    if (isCorrect) setTotalCorrect((prev) => prev + 1);
 
-      setTotalXP((prev) => prev + xp);
-      if (isCorrect) setTotalCorrect((prev) => prev + 1);
-
-      setTimeout(() => {
-        setFeedback(null);
-        setSelectedOpt(null);
-        setSubmittingAnswer(false);
-        
-        if (currentIdx + 1 < questions.length) {
-          setCurrentIdx((prevIdx) => prevIdx + 1);
-        } else {
-          setScreen('results');
-          loadRanking(player.id, playLeaderboardId);
-        }
-      }, 1500);
-
-    } catch (err) {
-      console.error('Answer submission failed:', err);
+    setTimeout(async () => {
+      setFeedback(null);
+      setSelectedOpt(null);
       setSubmittingAnswer(false);
-    }
+      
+      if (currentIdx + 1 < questions.length) {
+        setCurrentIdx((prevIdx) => prevIdx + 1);
+      } else {
+        // Bulk save
+        try {
+          if (isDemoMode()) {
+             // Simulate local saving
+          } else {
+             const { error } = await supabase!
+              .from('answers')
+              .insert(answersToSaveRef.current);
+             if (error) throw error;
+          }
+           
+          // Finalize results
+          if (player) {
+              await finalizePlayerResults(player.id, totalXP, totalCorrect, playLeaderboardId);
+          }
+          // Set to results screen
+          setScreen('results');
+          await loadRanking(player!.id);
+        } catch (err) {
+          console.error('Error final SAVING answers:', err);
+             // Should show feedback to user here
+        }
+      }
+    }, 1500);
   };
 
   // State: Reset locally to re-play
@@ -462,39 +446,17 @@ export default function PlayView() {
   return (
     <div className="min-h-screen bg-brand-dark flex flex-col justify-between" id="view-play">
       
-      {/* Dynamic Header */}
-      <header className="border-b border-border-default bg-bg-subtle/80 backdrop-blur px-5 py-4 flex items-center justify-between sticky top-0 z-40">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-brand-yellow flex items-center justify-center text-[#111211] font-display font-extrabold text-sm">
-            T
-          </div>
-          <span className="font-display font-bold tracking-tight text-brand-yellow text-md truncate max-w-[153px] md:max-w-none">
-            TRIVIA {activeLeaderboard ? `• ${activeLeaderboard.name}` : ''}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleExitLeaderboard}
-            className="text-[10px] font-mono font-bold bg-bg-elevated hover:bg-bg-subtle border border-border-default/80 px-2.5 py-1.5 rounded-lg text-brand-yellow transition-all hover:scale-[1.02] cursor-pointer"
-            title="Cambiar de dinámica trivia"
-          >
-            Cambiar Trivia 🏆
-          </button>
-
-          {player && (
-            <div className="flex items-center gap-2 bg-bg-elevated border border-border-default px-3 py-1 rounded-full shrink-0">
-              <User className="w-3.5 h-3.5 text-brand-yellow" />
-              <span className="text-xs font-semibold truncate max-w-[80px] text-brand-light">
-                {player.name}
-              </span>
-            </div>
-          )}
-        </div>
-      </header>
-
       {/* Main Container */}
       <main className="flex-1 max-w-md w-full mx-auto p-4 flex flex-col justify-center">
+        {player && screen !== 'registration' && (
+          <div className="flex justify-end items-center mb-4">
+            <div className="flex items-center gap-2 bg-bg-elevated/50 border border-border-default/50 px-3 py-1 rounded-full text-[10px] font-bold text-text-secondary">
+              <User className="w-3 h-3 text-brand-yellow" />
+              {player.name}
+            </div>
+          </div>
+        )}
+        {console.log('PlayView: Rendering with screen', screen, 'and player', player)}
         <AnimatePresence mode="wait">
           
           {/* PANTALLA 1: REGISTRO */}
@@ -599,9 +561,14 @@ export default function PlayView() {
                     <span className="text-xs font-mono text-text-secondary uppercase tracking-widest">
                       Pregunta <span className="text-brand-yellow font-bold">{currentIdx + 1}</span> de {questions.length}
                     </span>
-                    <span className="text-xs font-bold bg-bg-subtle text-brand-yellow px-2.5 py-1 rounded-full border border-border-default flex items-center gap-1.5 shadow">
-                      <Zap className="w-3 h-3" />
-                      +{questions[currentIdx].xp_value} XP
+                    <span className="flex items-center gap-2">
+                      <span className="text-xs font-bold bg-bg-subtle text-brand-yellow px-2.5 py-1 rounded-full border border-border-default flex items-center gap-1.5 shadow">
+                        <Zap className="w-3 h-3" />
+                         +{questions[currentIdx].xp_value} XP
+                      </span>
+                      <span className="text-xs font-bold bg-bg-subtle text-brand-light px-2.5 py-1 rounded-full border border-border-default flex items-center gap-1.5 shadow">
+                        Total {totalXP} XP
+                      </span>
                     </span>
                   </div>
 
@@ -855,24 +822,15 @@ export default function PlayView() {
               </div>
 
               {/* Actions footer wrapper */}
-              <div className="grid grid-cols-2 gap-2 mt-5 pt-4 border-t border-border-default">
+              <div className="grid grid-cols-1 gap-2 mt-5 pt-4 border-t border-border-default">
                 <button
                   type="button"
-                  onClick={() => loadRanking(player?.id || '')}
-                  className="py-3 bg-bg-elevated border border-border-default text-brand-light font-bold rounded-xl text-xs cursor-pointer hover:bg-bg-subtle transition-all active:scale-[0.98] flex items-center justify-center gap-1.5"
-                  id="btn_refresh_rank"
+                  onClick={() => window.location.href = `/leaderboard/${playLeaderboardId}`}
+                  className="py-3 bg-brand-yellow text-[#111211] font-bold rounded-xl text-xs cursor-pointer hover:brightness-115 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5"
+                  id="btn_view_leaderboard"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  Actualizar Tabla
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleRestartLocal}
-                  className="py-3 bg-red-100/10 hover:bg-neutral-800 border border-red-200 text-red-600 font-bold rounded-xl text-xs cursor-pointer transition-all active:scale-[0.98]"
-                  id="btn_restart_local"
-                >
-                  Nueva Partida
+                  <Trophy className="w-3.5 h-3.5" />
+                  Ver Leaderboard
                 </button>
               </div>
             </motion.div>

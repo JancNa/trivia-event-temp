@@ -39,6 +39,7 @@ export interface Answer {
 export interface LeaderboardRow {
   player_id: string;
   name: string;
+  player_name: string;
   total_xp: number;
   correct_answers: number;
   total_answers: number;
@@ -53,4 +54,12 @@ export interface LeaderboardInfo {
   name: string;
   status: ScreenState;
   created_at: string;
+  prize?: string; // Legacy
+  prize_title?: string;
+  prize_description?: string;
+  prize_image_url?: string;
+  prize_sponsor?: string;
+  prize_top_n?: number;
+  logo_url?: string;
+  background_image_url?: string;
 }
