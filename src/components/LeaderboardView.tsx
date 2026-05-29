@@ -119,6 +119,11 @@ export default function LeaderboardView() {
     }
     loadBoardInfo();
 
+    // Fetch leaderboard periodically every 2 seconds
+    const intervalId = setInterval(() => {
+      loadData(false, viewLeaderboardId);
+    }, 2000);
+
     // Subscribe to changes in temp.answers (Postgres Changes INSERT)
     const unsubscribe = subscribeToRealtimeAnswers(() => {
       setLatestActivity("¡Nueva respuesta registrada! Actualizando ranking...");
@@ -130,6 +135,7 @@ export default function LeaderboardView() {
 
     return () => {
       unsubscribe();
+      clearInterval(intervalId);
     };
   }, [viewLeaderboardId]);
 

@@ -149,6 +149,16 @@ export default function PlayView() {
 
   // 3. Question timer handler
   useEffect(() => {
+    if (screen === 'results' && player && playLeaderboardId) {
+      const rankInterval = setInterval(() => {
+        loadRanking(player.id, playLeaderboardId);
+      }, 2000);
+      return () => clearInterval(rankInterval);
+    }
+  }, [screen, player, playLeaderboardId]);
+
+  // 4. Time Question Handler
+  useEffect(() => {
     if (screen !== 'trivia' || questions.length === 0 || currentIdx >= questions.length) return;
 
     const currentQ = questions[currentIdx];

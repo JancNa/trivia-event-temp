@@ -194,10 +194,10 @@ export default function AdminView() {
   useEffect(() => {
     loadAllAdminData(false, selectedLeaderboardId);
 
-    // Auto refresh every 30 seconds as fallback
+    // Auto refresh every 2 seconds as fallback
     const interval = setInterval(() => {
       loadAllAdminData(false, selectedLeaderboardId);
-    }, 30000);
+    }, 2000);
 
     // Supabase / Simulated Realtime PG subscription
     const unsubscribe = subscribeToRealtimeAnswers(() => {
