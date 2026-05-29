@@ -112,11 +112,7 @@ export default function PlaySelectionView() {
           )}
         </div>
       </main>
-      <footer className="py-4 border-t border-border-default bg-bg-subtle text-center">
-        <p className="text-[10px] text-text-secondary font-semibold uppercase tracking-widest select-none">
-          Trivia Event • Presencial interactivo • Producido por AI Studio 
-        </p>
-      </footer>
+
     </div>
   );
 }
