@@ -363,51 +363,8 @@ export default function LeaderboardView() {
       }}
     >
       {/* Floating Quiet Control Utilities Bar at the very top */}
-      <div className="absolute top-4 left-4 right-4 z-50 flex items-center justify-between pointer-events-none">
+      <div className="absolute top-4 left-4 right-4 z-50 flex items-center justify-between pointer-events-none text-transparent">
         <div className="flex items-center gap-2 pointer-events-auto">
-          <Link
-            to="/"
-            className="px-4 py-2 bg-black/40 hover:bg-black/60 border border-white/10 text-white hover:text-brand-yellow font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 backdrop-blur shadow-lg cursor-pointer"
-            id="btn_leaderboard_home"
-          >
-            <span>← Portal</span>
-          </Link>
-          <button 
-            onClick={() => {
-              localStorage.removeItem('view_selected_leaderboard_id');
-              setViewLeaderboardId(null);
-              setLeaderboard([]);
-            }}
-            className="px-3 py-2 bg-black/40 hover:bg-black/60 border border-white/10 text-white hover:text-brand-yellow font-bold rounded-xl text-xs transition-colors backdrop-blur shadow-lg cursor-pointer flex items-center gap-1.5"
-          >
-            Cambiar Evento 🏆
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2 pointer-events-auto">
-          {isDemoMode() && (
-            <button
-              onClick={spawnFakePlayer}
-              className="px-3 py-2 bg-[#fed600] text-[#111211] hover:brightness-110 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 shadow-lg"
-              id="btn-trigger-mock-competitor"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>+ Simular</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => loadData(true, viewLeaderboardId)}
-            className="p-2 bg-black/40 hover:bg-black/60 border border-white/10 rounded-xl text-white hover:text-brand-yellow transition-all cursor-pointer backdrop-blur shadow-lg"
-            title="Refrescar ranking manualmente"
-            id="btn-manual-refresh"
-          >
-            <RefreshCw
-              className={`w-4 h-4 ${isRefreshing ? "animate-spin text-[#fed600]" : ""}`}
-            />
-          </button>
-
-
         </div>
       </div>
 
