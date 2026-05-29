@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import QRCode from 'react-qr-code';
 import { Question, LeaderboardRow, LeaderboardInfo, Answer, Player } from '../types';
 import { 
   fetchQuestions, 
@@ -58,6 +59,7 @@ export default function AdminView() {
   const [selectedLeaderboardId, setSelectedLeaderboardId] = useState('00000000-0000-0000-0000-000000000001');
   const [leaderboardList, setLeaderboardList] = useState<LeaderboardInfo[]>([]);
   const [showNewBoardModal, setShowNewBoardModal] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
   const [newBoardName, setNewBoardName] = useState('');
   const [creatingBoard, setCreatingBoard] = useState(false);
 
@@ -506,7 +508,7 @@ export default function AdminView() {
                   const targetId = e.target.value;
                   setSelectedLeaderboardId(targetId);
                 }}
-                className="w-full bg-bg-subtle hover:bg-bg-elevated/85 border border-border-default hover:border-brand-yellow/35 rounded-xl p-2.5 text-[11px] font-bold text-white pr-7 focus:outline-none focus:border-brand-yellow cursor-pointer appearance-none transition-all shadow-inner"
+                className="w-full bg-bg-subtle hover:bg-bg-elevated/85 border border-border-default hover:border-brand-yellow/35 rounded-xl p-2.5 text-[11px] font-bold text-brand-light pr-7 focus:outline-none focus:border-brand-yellow cursor-pointer appearance-none transition-all shadow-inner"
               >
                 {leaderboardList.map(board => (
                   <option key={board.id} value={board.id} className="bg-neutral-950 font-sans py-2 font-bold text-white text-[11px]">
@@ -620,7 +622,7 @@ export default function AdminView() {
               <Sliders className="w-3.5 h-3.5" />
               <span>Dinámica y Evento Activo</span>
             </div>
-            <h1 className="text-xl lg:text-3xl font-display font-extrabold tracking-tight text-white flex items-center gap-2">
+            <h1 className="text-xl lg:text-3xl font-display font-extrabold tracking-tight text-brand-light flex items-center gap-2">
               🏆 {activeLeaderboard ? activeLeaderboard.name : 'Trivia Event Principal'}
             </h1>
           </div>
@@ -700,7 +702,7 @@ export default function AdminView() {
               className="space-y-6"
             >
               <div className="bg-bg-subtle border border-border-default rounded-3xl p-6 shadow-xl space-y-4">
-                <div className="flex items-center justify-between border-b border-border-default/60 pb-4">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-border-default/60 pb-4 gap-4">
                   <div className="space-y-1">
                     <h2 className="text-lg font-display font-semibold text-brand-light flex items-center gap-2">
                       <Trophy className="w-5 h-5 text-brand-yellow shrink-0" />
@@ -709,6 +711,57 @@ export default function AdminView() {
                     <p className="text-xs text-text-secondary">
                       Sincronizado instantáneamente con las respuestas enviadas por los participantes.
                     </p>
+                  </div>
+                  <div className="flex flex-col gap-2 shrink-0">
+                    {/* PLAY LINK CARD */}
+                    <div className="bg-neutral-900/40 border border-neutral-700/50 p-3 rounded-2xl flex items-center gap-3">
+                      <div className="flex-1 min-w-[200px]">
+                        <span className="block text-[10px] text-text-secondary font-mono tracking-wider mb-1">
+                          ENLACE PARA JUGADORES:
+                        </span>
+                        <a href={`${window.location.origin}/#/play/${selectedLeaderboardId}`} target="_blank" rel="noreferrer" className="text-xs text-brand-yellow font-bold hover:underline break-all" title="Ir a la trivia">
+                          {`${window.location.origin}/#/play/${selectedLeaderboardId}`}
+                        </a>
+                      </div>
+                      <div className="flex flex-col gap-1.5 shrink-0">
+                        <button 
+                          onClick={() => {
+                            navigator.clipboard.writeText(`${window.location.origin}/#/play/${selectedLeaderboardId}`);
+                            showToast('Enlace de jugador copiado');
+                          }}
+                          className="w-full px-3 py-1.5 bg-bg-elevated hover:bg-neutral-800 text-[10px] font-bold uppercase tracking-wider text-text-secondary border border-border-default hover:border-brand-yellow rounded-xl transition-all cursor-pointer shadow flex items-center justify-center shrink-0"
+                        >
+                          Copiar URL
+                        </button>
+                        <button 
+                          onClick={() => setShowQRModal(true)}
+                          className="w-full px-3 py-1.5 bg-brand-yellow/10 hover:bg-brand-yellow/20 text-[#fed600] text-[10px] font-bold uppercase tracking-wider border border-brand-yellow/30 hover:border-brand-yellow rounded-xl transition-all cursor-pointer shadow flex items-center justify-center shrink-0"
+                        >
+                          Ver QR
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* LEADERBOARD LINK CARD */}
+                    <div className="bg-neutral-900/40 border border-neutral-700/50 p-3 rounded-2xl flex items-center gap-3">
+                      <div className="flex-1 min-w-[200px]">
+                        <span className="block text-[10px] text-text-secondary font-mono tracking-wider mb-1">
+                          ENLACE LEADERBOARD:
+                        </span>
+                        <a href={`${window.location.origin}/#/leaderboard/${selectedLeaderboardId}`} target="_blank" rel="noreferrer" className="text-xs text-brand-yellow font-bold hover:underline break-all" title="Ir al leaderboard público">
+                          {`${window.location.origin}/#/leaderboard/${selectedLeaderboardId}`}
+                        </a>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/#/leaderboard/${selectedLeaderboardId}`);
+                          showToast('Enlace de leaderboard copiado');
+                        }}
+                        className="px-3 py-1.5 bg-bg-elevated hover:bg-neutral-800 text-xs text-text-secondary border border-border-default hover:border-brand-yellow rounded-xl transition-all cursor-pointer shadow flex items-center justify-center shrink-0"
+                      >
+                        Copiar
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -762,7 +815,7 @@ export default function AdminView() {
                                   </span>
                                 )}
                               </td>
-                              <td className="py-4 px-3 font-extrabold text-sm text-white">
+                              <td className="py-4 px-3 font-extrabold text-sm text-brand-light">
                                 {row.name}
                               </td>
                               <td className="py-4 px-3 text-center text-brand-yellow font-bold font-mono text-sm">
@@ -792,7 +845,7 @@ export default function AdminView() {
               <div className="bg-bg-subtle border border-border-default rounded-3xl p-6 shadow-xl space-y-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-default/60 pb-4">
                   <div className="space-y-1">
-                    <h3 className="text-md font-display font-bold text-white flex items-center gap-2">
+                    <h3 className="text-md font-display font-bold text-brand-light flex items-center gap-2">
                       <Award className="w-5 h-5 text-brand-yellow" />
                       <span>Panel de Premiación y Cierre</span>
                     </h3>
@@ -853,7 +906,7 @@ export default function AdminView() {
                             <span className="text-[10px] font-mono tracking-widest text-text-secondary uppercase">
                               {idx === 0 ? '🏆 Ganador de Oro' : idx === 1 ? '🥈 Subcampeón de Plata animate-pulse' : '🥉 Bronce'}
                             </span>
-                            <h4 className="text-sm font-extrabold text-white truncate max-w-[150px]">
+                            <h4 className="text-sm font-extrabold text-brand-light truncate max-w-[150px]">
                               {win.name}
                             </h4>
                             <p className="text-xs font-mono font-bold text-brand-yellow">
@@ -904,7 +957,7 @@ export default function AdminView() {
                     <span className="text-[10px] font-mono font-extrabold text-text-secondary uppercase tracking-widest block">
                       Jugadores Registrados
                     </span>
-                    <span className="text-2xl font-mono font-black text-white">
+                    <span className="text-2xl font-mono font-black text-brand-light">
                       {computedStats.totalPlayers}
                     </span>
                   </div>
@@ -922,7 +975,7 @@ export default function AdminView() {
                     <span className="text-[10px] font-mono font-extrabold text-text-secondary uppercase tracking-widest block">
                       Respuestas Enviadas
                     </span>
-                    <span className="text-2xl font-mono font-black text-white">
+                    <span className="text-2xl font-mono font-black text-brand-light">
                       {computedStats.totalAnswers}
                     </span>
                   </div>
@@ -940,7 +993,7 @@ export default function AdminView() {
                     <span className="text-[10px] font-mono font-extrabold text-text-secondary uppercase tracking-widest block">
                       % Completitud
                     </span>
-                    <span className="text-2xl font-mono font-black text-white">
+                    <span className="text-2xl font-mono font-black text-brand-light">
                       {computedStats.completionPercentage}%
                     </span>
                   </div>
@@ -958,7 +1011,7 @@ export default function AdminView() {
                     <span className="text-[10px] font-mono font-extrabold text-text-secondary uppercase tracking-widest block">
                       XP Promedio
                     </span>
-                    <span className="text-2xl font-mono font-black text-white">
+                    <span className="text-2xl font-mono font-black text-brand-light">
                       {computedStats.averageXP.toLocaleString()} XP
                     </span>
                   </div>
@@ -982,7 +1035,7 @@ export default function AdminView() {
             >
               <div className="bg-bg-subtle border border-border-default rounded-3xl p-6 shadow-xl space-y-4">
                 <div className="border-b border-border-default/60 pb-3">
-                  <h2 className="text-md font-display font-bold text-white flex items-center gap-2">
+                  <h2 className="text-md font-display font-bold text-brand-light flex items-center gap-2">
                     <Users className="w-5 h-5 text-brand-yellow" />
                     <span>Participantes Totales Registrados ({players.length})</span>
                   </h2>
@@ -1020,7 +1073,7 @@ export default function AdminView() {
                           return (
                             <React.Fragment key={plyr.id}>
                               <tr className={`hover:bg-bg-elevated/40 transition-all ${isExpanded ? 'bg-bg-elevated/25' : ''}`}>
-                                <td className="py-3.5 px-3 font-extrabold text-sm text-white">
+                                <td className="py-3.5 px-3 font-extrabold text-sm text-brand-light">
                                   {plyr.name}
                                 </td>
                                 <td className="py-3.5 px-3 text-center font-mono font-bold text-brand-yellow text-sm">
@@ -1082,7 +1135,7 @@ export default function AdminView() {
                                                     <span className="text-[9px] font-mono bg-bg-subtle text-text-secondary px-1.5 py-0.5 rounded border border-border-default">
                                                       Pregunta #{aIdx + 1}
                                                     </span>
-                                                    <p className="font-extrabold text-white text-xs mt-1 leading-relaxed leading-snug">
+                                                    <p className="font-extrabold text-brand-light text-xs mt-1 leading-relaxed leading-snug">
                                                       {associatedQ ? associatedQ.question : '¿Pregunta Suprimida del Evento?'}
                                                     </p>
                                                     <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[11px] text-text-secondary">
@@ -1139,7 +1192,7 @@ export default function AdminView() {
               <div className="bg-bg-subtle border border-border-default rounded-3xl p-6 shadow-xl space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-default/60 pb-4">
                   <div className="space-y-1">
-                    <h2 className="text-md font-display font-bold text-white flex items-center gap-2">
+                    <h2 className="text-md font-display font-bold text-brand-light flex items-center gap-2">
                       <HelpCircle className="w-5 h-5 text-brand-yellow" />
                       <span>Banco de Preguntas para la Dinámica ({questions.length})</span>
                     </h2>
@@ -1199,7 +1252,7 @@ export default function AdminView() {
                             <td className="py-4 px-3 text-center text-text-secondary font-mono">
                               #{q.order_index}
                             </td>
-                            <td className="py-4 px-3 font-extrabold text-sm text-white max-w-xs truncate">
+                            <td className="py-4 px-3 font-extrabold text-sm text-brand-light max-w-xs truncate">
                               {q.question}
                             </td>
                             <td className="py-4 px-3 text-text-secondary max-w-[120px] truncate">{q.option_a}</td>
@@ -1260,7 +1313,7 @@ export default function AdminView() {
               className="bg-bg-subtle border border-border-default rounded-3xl p-6 shadow-2xl max-w-xl w-full text-xs font-semibold space-y-4 max-h-[90vh] overflow-y-auto"
             >
               <div className="flex items-center justify-between border-b border-border-default pb-3">
-                <h3 className="text-md font-display font-extrabold text-white">
+                <h3 className="text-md font-display font-extrabold text-brand-light">
                   {editingQuestionId ? '✏️ Editar Pregunta' : '➕ Agregar Nueva Pregunta'}
                 </h3>
                 <button
@@ -1442,7 +1495,7 @@ export default function AdminView() {
               </div>
               
               <div className="space-y-1.5">
-                <h3 className="text-sm font-display font-bold text-white uppercase tracking-wider">
+                <h3 className="text-sm font-display font-bold text-brand-light uppercase tracking-wider">
                   ¿Reiniciar Evento de Trivia?
                 </h3>
                 <p className="text-xs text-text-secondary leading-relaxed">
@@ -1461,7 +1514,7 @@ export default function AdminView() {
                 <button
                   type="button"
                   onClick={handleResetEventConfirm}
-                  className="flex-1 py-2.5 bg-red-650 hover:bg-red-700 text-white rounded-xl font-extrabold cursor-pointer transition-all"
+                  className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-extrabold cursor-pointer transition-all"
                   id="btn_confirm_reset_action"
                 >
                   Confirmar Limpieza
@@ -1483,7 +1536,7 @@ export default function AdminView() {
               className="bg-bg-subtle border border-border-default rounded-3xl p-6 shadow-2xl max-w-sm w-full text-xs font-semibold text-center space-y-4"
             >
               <div className="space-y-1.5 text-center">
-                <h3 className="text-sm font-display font-black text-white uppercase tracking-wider flex items-center justify-center gap-2">
+                <h3 className="text-sm font-display font-black text-brand-light uppercase tracking-wider flex items-center justify-center gap-2">
                   <span className="text-xl">✨</span> Crear Nuevo Evento de Trivia
                 </h3>
                 <p className="text-xs text-text-secondary leading-relaxed">
@@ -1526,6 +1579,40 @@ export default function AdminView() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* QR MODAL */}
+      <AnimatePresence>
+        {showQRModal && (
+          <div className="fixed inset-0 bg-neutral-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-bg-default border border-border-default p-8 rounded-3xl w-full max-w-sm shadow-2xl relative text-center"
+            >
+              <h3 className="text-lg font-display font-black text-brand-light tracking-tight mb-2">
+                Escanea para Jugar
+              </h3>
+              <p className="text-xs text-text-secondary mb-6 leading-relaxed">
+                Invita a los participantes a escanear este código QR para entrar directamente a la dinámica.
+              </p>
+
+              <div className="bg-white p-4 rounded-2xl mx-auto inline-block mb-6 shadow-md border-[6px] border-bg-elevated">
+                <QRCode value={`${window.location.origin}/#/play/${selectedLeaderboardId}`} size={200} level="H" />
+              </div>
+
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setShowQRModal(false)}
+                  className="flex-1 px-4 py-2.5 bg-bg-elevated hover:bg-neutral-800 text-xs text-text-secondary border border-border-default rounded-xl transition-all cursor-pointer font-bold"
+                >
+                  Cerrar
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

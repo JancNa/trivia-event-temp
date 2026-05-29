@@ -28,8 +28,8 @@ export default function App() {
     <HashRouter>
       <Routes>
         <Route path="/" element={<ProtectedRoute><HomePortal /></ProtectedRoute>} />
-        <Route path="/play" element={<PlayView />} />
-        <Route path="/leaderboard" element={<ProtectedRoute><LeaderboardView /></ProtectedRoute>} />
+        <Route path="/play/:leaderboardId" element={<PlayView />} />
+        <Route path="/leaderboard/:leaderboardId" element={<ProtectedRoute><LeaderboardView /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><AdminView /></ProtectedRoute>} />
         <Route path="*" element={<ProtectedRoute><HomePortal /></ProtectedRoute>} />
       </Routes>
@@ -72,7 +72,7 @@ function HomePortal() {
           </span>
           <button
             onClick={handleLogout}
-            className="px-3.5 py-1.5 bg-red-50 hover:bg-red-100/75 border border-red-200 text-red-650 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer shadow-sm active:scale-95"
+            className="px-3.5 py-1.5 bg-red-50 hover:bg-red-100/75 border border-red-200 text-red-600 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer shadow-sm active:scale-95"
             title="Cerrar sesión de administrador y bloquear vistas"
             id="btn_admin_logout"
           >
@@ -97,52 +97,50 @@ function HomePortal() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
           {/* VISTA JUGADOR */}
-          <Link 
-            to="/play" 
-            className="group bg-bg-subtle border border-border-default hover:border-brand-yellow rounded-3xl p-6 shadow-xl transition-all hover:translate-y-[-4px] cursor-pointer"
+          <div 
+            className="group bg-bg-subtle border border-border-default rounded-3xl p-6 shadow-xl transition-all"
             id="portal_play_link"
           >
-            <div className="w-12 h-12 bg-bg-elevated border border-border-default rounded-2xl flex items-center justify-center text-[#fed600] mb-6 group-hover:bg-brand-yellow group-hover:text-[#111211] transition-all">
+            <div className="w-12 h-12 bg-bg-elevated border border-border-default rounded-2xl flex items-center justify-center text-[#fed600] mb-6 transition-all">
               <User className="w-6 h-6" />
             </div>
             
             <h3 className="text-lg font-display font-bold text-brand-light mb-2 flex items-center gap-1.5">
               Vista Jugador
-              <span className="text-[9px] font-mono font-bold bg-bg-elevated text-text-secondary border border-border-default px-2 py-0.5 rounded-md group-hover:border-brand-yellow/30 group-hover:text-brand-yellow transition-all animate-pulse">Mobile</span>
+              <span className="text-[9px] font-mono font-bold bg-bg-elevated text-text-secondary border border-border-default px-2 py-0.5 rounded-md transition-all">Mobile</span>
             </h3>
             
             <p className="text-xs text-text-body leading-relaxed mb-6">
               Pensado para que los participantes jueguen desde sus teléfonos móviles. Registro de nombre, trivia interactiva de alta fidelidad, cálculo de XP y posiciones.
             </p>
 
-            <span className="text-xs font-bold text-brand-yellow group-hover:underline flex items-center gap-1.5 uppercase font-mono tracking-wider">
-              Entrar URL: /play →
+            <span className="text-xs font-bold text-text-secondary flex items-center gap-1.5 uppercase font-mono tracking-wider">
+              (URL Única en Admin)
             </span>
-          </Link>
+          </div>
 
           {/* VISTA LEADERBOARD */}
-          <Link 
-            to="/leaderboard" 
-            className="group bg-bg-subtle border border-border-default hover:border-brand-yellow rounded-3xl p-6 shadow-xl transition-all hover:translate-y-[-4px] cursor-pointer"
+          <div 
+            className="group bg-bg-subtle border border-border-default rounded-3xl p-6 shadow-xl transition-all"
             id="portal_leaderboard_link"
           >
-            <div className="w-12 h-12 bg-bg-elevated border border-border-default rounded-2xl flex items-center justify-center text-[#fed600] mb-6 group-hover:bg-brand-yellow group-hover:text-[#111211] transition-all">
+            <div className="w-12 h-12 bg-bg-elevated border border-border-default rounded-2xl flex items-center justify-center text-[#fed600] mb-6 transition-all">
               <Trophy className="w-6 h-6" />
             </div>
             
             <h3 className="text-lg font-display font-bold text-brand-light mb-2 flex items-center gap-1.5">
               Vista Proyección
-              <span className="text-[9px] font-mono font-bold bg-bg-elevated text-text-secondary border border-border-default px-2 py-0.5 rounded-md group-hover:border-brand-yellow/30 group-hover:text-brand-yellow transition-all">Screen</span>
+              <span className="text-[9px] font-mono font-bold bg-bg-elevated text-text-secondary border border-border-default px-2 py-0.5 rounded-md transition-all">Screen</span>
             </h3>
             
             <p className="text-xs text-text-body leading-relaxed mb-6">
               Diseño de pantalla completa de alto impacto optimizado para proyectores. Podio interactivo 3D del Top 3, buscador con filtros y updates automáticos en tiempo real.
             </p>
 
-            <span className="text-xs font-bold text-brand-yellow group-hover:underline flex items-center gap-1.5 uppercase font-mono tracking-wider">
-              Entrar URL: /leaderboard →
+            <span className="text-xs font-bold text-text-secondary flex items-center gap-1.5 uppercase font-mono tracking-wider">
+              (URL Única en Admin)
             </span>
-          </Link>
+          </div>
 
           {/* VISTA ADMIN */}
           <Link 

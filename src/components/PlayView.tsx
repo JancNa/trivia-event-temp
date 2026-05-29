@@ -30,7 +30,7 @@ import {
   ChevronRight,
   Database
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function PlayView() {
@@ -39,9 +39,14 @@ export default function PlayView() {
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
   const [submittingAnswer, setSubmittingAnswer] = useState(false);
+  const { leaderboardId } = useParams<{ leaderboardId: string }>();
 
   // Dynamic dynamic leaderboard selectors
   const [playLeaderboardId, setPlayLeaderboardId] = useState<string | null>(() => {
+    if (leaderboardId) {
+      localStorage.setItem('play_selected_leaderboard_id', leaderboardId);
+      return leaderboardId;
+    }
     return localStorage.getItem('play_selected_leaderboard_id');
   });
   const [leaderboardsList, setLeaderboardsList] = useState<LeaderboardInfo[]>([]);
@@ -644,7 +649,7 @@ export default function PlayView() {
                           btnStyle = 'border-2 border-emerald-500 bg-emerald-50 text-emerald-800 font-bold';
                           iconEl = <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />;
                         } else if (isSelected) {
-                          btnStyle = 'border-2 border-red-500 bg-red-50 text-red-750 font-bold';
+                          btnStyle = 'border-2 border-red-500 bg-red-50 text-red-700 font-bold';
                           iconEl = <XCircle className="w-4 h-4 text-red-600 shrink-0" />;
                         } else {
                           btnStyle = 'border border-border-default bg-bg-elevated text-text-secondary opacity-40';
@@ -667,7 +672,7 @@ export default function PlayView() {
                               ? isCorrectAnswer 
                                 ? 'bg-emerald-500 text-[#111211]' 
                                 : isSelected 
-                                  ? 'bg-red-500 text-brand-light' 
+                                  ? 'bg-red-500 text-bg-subtle' 
                                   : 'bg-bg-elevated text-text-secondary'
                               : isSelected 
                                 ? 'bg-brand-yellow text-[#111211]' 

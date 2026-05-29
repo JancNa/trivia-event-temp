@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { LeaderboardRow, LeaderboardInfo } from '../types';
 import { 
   fetchLeaderboard, 
@@ -39,9 +39,14 @@ export default function LeaderboardView() {
   const [latestActivity, setLatestActivity] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const { leaderboardId } = useParams<{ leaderboardId: string }>();
 
   // Dynamic dynamic leaderboard selectors
   const [viewLeaderboardId, setViewLeaderboardId] = useState<string | null>(() => {
+    if (leaderboardId) {
+      localStorage.setItem('view_selected_leaderboard_id', leaderboardId);
+      return leaderboardId;
+    }
     return localStorage.getItem('view_selected_leaderboard_id');
   });
   const [leaderboardsList, setLeaderboardsList] = useState<LeaderboardInfo[]>([]);
@@ -207,7 +212,7 @@ export default function LeaderboardView() {
             ) : leaderboardsList.length === 0 ? (
               <div className="text-center py-10 bg-slate-50 border border-dashed border-slate-200 rounded-2xl">
                 <Database className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                <p className="text-xs text-slate-750 font-bold mb-1">No hay trivias todavía</p>
+                <p className="text-xs text-slate-700 font-bold mb-1">No hay trivias todavía</p>
                 <p className="text-[11px] text-slate-500 leading-relaxed px-4">
                   Por favor ve al panel de administración para crear tu tabla de posiciones.
                 </p>
@@ -296,16 +301,6 @@ export default function LeaderboardView() {
           >
             <span>← Portal</span>
           </Link>
-          <button 
-            onClick={() => {
-              localStorage.removeItem('view_selected_leaderboard_id');
-              setViewLeaderboardId(null);
-              setLeaderboard([]);
-            }}
-            className="px-3 py-2 bg-black/40 hover:bg-black/60 border border-white/10 text-white hover:text-brand-yellow font-bold rounded-xl text-xs transition-colors backdrop-blur shadow-lg cursor-pointer flex items-center gap-1.5"
-          >
-            Cambiar Evento 🏆
-          </button>
         </div>
         
         <div className="flex items-center gap-2 pointer-events-auto">
