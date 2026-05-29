@@ -5,44 +5,37 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Public credentials — safe to hardcode (anon key, RLS enforced)
-const SUPABASE_URL = 'https://zgctbuwztqbafrfjxujq.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpnY3RidXd6dHFiYWZyZmp4dWpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4MzY0NDEsImV4cCI6MjA5NTQxMjQ0MX0.Dmxg2fBKjkk3Ou1fLrtati3p9_KKBMELJG8uLvh2KwY';
-
 const getSupabaseConfig = () => {
   const metaEnv = (import.meta as any).env || {};
 
-  const envUrl = metaEnv.VITE_SUPABASE_URL || SUPABASE_URL;
-  const envKey = metaEnv.VITE_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY;
-  const envServiceKey = metaEnv.VITE_SUPABASE_SERVICE_ROLE_KEY ||
-                        metaEnv.SUPABASE_SERVICE_ROLE_KEY ||
-                        typeof window !== 'undefined' ? localStorage.getItem('trivia_supabase_service_key') || '' : '';
+  const url = metaEnv.VITE_SUPABASE_URL ||
+    (typeof window !== 'undefined' ? localStorage.getItem('trivia_supabase_url') : null) || '';
 
-  return {
-    url: envUrl,
-    key: envKey,
-    serviceKey: envServiceKey as string
-  };
+  const key = metaEnv.VITE_SUPABASE_ANON_KEY ||
+    (typeof window !== 'undefined' ? localStorage.getItem('trivia_supabase_key') : null) || '';
+
+  const serviceKey = metaEnv.VITE_SUPABASE_SERVICE_ROLE_KEY ||
+    (typeof window !== 'undefined' ? localStorage.getItem('trivia_supabase_service_key') : null) || '';
+
+  return { url, key, serviceKey };
 };
 
 export const config = getSupabaseConfig();
 
-export const supabase = createClient(config.url, config.key, {
-  db: { schema: 'temp' }
-});
+export let supabase: any = null;
+export let supabaseAdmin: any = null;
 
-export const supabaseAdmin = createClient(
-  config.url,
-  config.serviceKey || config.key,
-  { db: { schema: 'temp' } }
-);
+if (config.url && config.key) {
+  supabase = createClient(config.url, config.key, { db: { schema: 'temp' } });
+  supabaseAdmin = createClient(config.url, config.serviceKey || config.key, { db: { schema: 'temp' } });
+}
 
 export function updateSupabaseClient(url: string, key: string, serviceKey?: string) {
   if (!url || !key) return false;
   try {
-    if (serviceKey) {
-      localStorage.setItem('trivia_supabase_service_key', serviceKey);
-    }
+    localStorage.setItem('trivia_supabase_url', url);
+    localStorage.setItem('trivia_supabase_key', key);
+    if (serviceKey) localStorage.setItem('trivia_supabase_service_key', serviceKey);
     window.location.reload();
     return true;
   } catch (e) {
@@ -52,6 +45,8 @@ export function updateSupabaseClient(url: string, key: string, serviceKey?: stri
 }
 
 export function clearSupabaseClient() {
+  localStorage.removeItem('trivia_supabase_url');
+  localStorage.removeItem('trivia_supabase_key');
   localStorage.removeItem('trivia_supabase_service_key');
   window.location.reload();
 }

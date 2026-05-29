@@ -17,6 +17,10 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      VITE_LEADERBOARD_ID: ${{ secrets.VITE_LEADERBOARD_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,10 +34,6 @@ jobs:
         run: npm install
 
       - name: Build
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          VITE_LEADERBOARD_ID: ${{ secrets.VITE_LEADERBOARD_ID }}
         run: npm run build
 
       - name: Upload artifact
