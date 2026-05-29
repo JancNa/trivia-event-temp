@@ -32,7 +32,7 @@ import {
   ChevronRight,
   Database
 } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function PlayView() {
@@ -42,6 +42,7 @@ export default function PlayView() {
   const [registering, setRegistering] = useState(false);
   const [submittingAnswer, setSubmittingAnswer] = useState(false);
   const { leaderboardId } = useParams<{ leaderboardId: string }>();
+  const navigate = useNavigate();
 
   // Dynamic dynamic leaderboard selectors
   const [playLeaderboardId, setPlayLeaderboardId] = useState<string | null>(() => {
@@ -821,7 +822,7 @@ export default function PlayView() {
               <div className="grid grid-cols-1 gap-2 mt-5 pt-4 border-t border-border-default">
                 <button
                   type="button"
-                  onClick={() => window.location.href = `/leaderboard/${playLeaderboardId}`}
+                  onClick={() => navigate(`/leaderboard/${playLeaderboardId}`)}
                   className="py-3 bg-brand-yellow text-[#111211] font-bold rounded-xl text-xs cursor-pointer hover:brightness-115 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5"
                   id="btn_view_leaderboard"
                 >

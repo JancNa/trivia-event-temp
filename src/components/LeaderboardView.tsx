@@ -410,9 +410,9 @@ export default function LeaderboardView() {
         {/* LEAL FLOATING LOGO */}
         <div className="flex justify-center mb-6">
           <div className="w-32 h-32 select-none transition-transform duration-300 hover:scale-105">
-            {activeLeaderboard?.logo_url ? (
+            {activeLeaderboard?.prize_sponsor || activeLeaderboard?.logo_url ? (
               <img
-                src={activeLeaderboard.logo_url}
+                src={activeLeaderboard.prize_sponsor || activeLeaderboard.logo_url}
                 alt="Logo"
                 className="w-full h-full object-contain filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)]"
               />
