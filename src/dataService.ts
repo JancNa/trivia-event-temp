@@ -597,11 +597,13 @@ export async function finalizePlayerResults(
 }
 
 export async function fetchActiveLeaderboardInfo(leaderboardId: string = '00000000-0000-0000-0000-000000000001'): Promise<LeaderboardInfo | null> {
+  const targetId = leaderboardId === 'default' ? '00000000-0000-0000-0000-000000000001' : leaderboardId;
+
   if (isDemoMode()) {
     const list = fetchLeaderboards();
-    const board = list.find(b => b.id === leaderboardId || (leaderboardId === '00000000-0000-0000-0000-000000000001' && b.id === 'default'));
-    return board ? { ...board, id: leaderboardId } : {
-      id: leaderboardId,
+    const board = list.find(b => b.id === targetId || (targetId === '00000000-0000-0000-0000-000000000001' && b.id === 'default'));
+    return board ? { ...board, id: targetId } : {
+      id: targetId,
       name: 'Trivia Event Principal',
       status: 'active' as any,
       created_at: new Date().toISOString()
@@ -611,12 +613,12 @@ export async function fetchActiveLeaderboardInfo(leaderboardId: string = '000000
     const { data, error } = await supabase!
       .from('leaderboards')
       .select('*')
-      .eq('id', leaderboardId)
+      .eq('id', targetId)
       .single();
     if (error) {
       console.warn('Metadata view or table leaderboards failed, using fallback:', error);
       const fallbackResult = {
-        id: leaderboardId,
+        id: targetId,
         name: 'Trivia Event Principal (Fallback)',
         status: 'active' as any,
         created_at: new Date().toISOString()
@@ -626,8 +628,8 @@ export async function fetchActiveLeaderboardInfo(leaderboardId: string = '000000
         const storedThemesStr = localStorage.getItem('trivia_custom_themes');
         if (storedThemesStr) {
           const storedThemes = JSON.parse(storedThemesStr);
-          if (storedThemes[leaderboardId]) {
-            return { ...fallbackResult, ...storedThemes[leaderboardId] };
+          if (storedThemes[targetId]) {
+            return { ...fallbackResult, ...storedThemes[targetId] };
           }
         }
       } catch (e) {}
@@ -639,10 +641,10 @@ export async function fetchActiveLeaderboardInfo(leaderboardId: string = '000000
       const storedThemesStr = localStorage.getItem('trivia_custom_themes');
       if (storedThemesStr && data) {
         const storedThemes = JSON.parse(storedThemesStr);
-        if (storedThemes[leaderboardId]) {
+        if (storedThemes[targetId]) {
           return {
             ...data,
-            ...storedThemes[leaderboardId]
+            ...storedThemes[targetId]
           };
         }
       }
@@ -653,7 +655,7 @@ export async function fetchActiveLeaderboardInfo(leaderboardId: string = '000000
     return data;
   } catch (err) {
     const fallbackResult = {
-      id: leaderboardId,
+      id: targetId,
       name: 'Trivia Event Principal (Fallback)',
       status: 'active' as any,
       created_at: new Date().toISOString()
@@ -662,8 +664,8 @@ export async function fetchActiveLeaderboardInfo(leaderboardId: string = '000000
       const storedThemesStr = localStorage.getItem('trivia_custom_themes');
       if (storedThemesStr) {
         const storedThemes = JSON.parse(storedThemesStr);
-        if (storedThemes[leaderboardId]) {
-          return { ...fallbackResult, ...storedThemes[leaderboardId] };
+        if (storedThemes[targetId]) {
+          return { ...fallbackResult, ...storedThemes[targetId] };
         }
       }
     } catch (e) {}
@@ -703,6 +705,9 @@ export async function updateLeaderboardDetailsSupabase(
       prize_sponsor: updates.prize_sponsor,
       logo_url: updates.logo_url,
       background_image_url: updates.background_image_url,
+      theme_primary: updates.theme_primary,
+      theme_secondary: updates.theme_secondary,
+      theme_card_bg: updates.theme_card_bg,
     };
 
     // If there are theme colors, also save to local storage as a robust fallback
@@ -718,27 +723,13 @@ export async function updateLeaderboardDetailsSupabase(
       localStorage.setItem('trivia_custom_themes', JSON.stringify(storedThemes));
     }
 
-    // Try to update with standard fields
+    // Try to update with standard fields (including themes now in the standard schema)
     const { error: standardError } = await client
       .from('leaderboards')
       .update(standardFields)
       .eq('id', targetId);
 
     if (standardError) throw standardError;
-
-    // Optional: Also try to update with theme columns just in case they exist on their physical schema
-    try {
-      const { error: fullError } = await client
-        .from('leaderboards')
-        .update({
-          theme_primary: updates.theme_primary,
-          theme_secondary: updates.theme_secondary,
-          theme_card_bg: updates.theme_card_bg
-        })
-        .eq('id', targetId);
-    } catch (e) {
-      // safe to ignore missing columns
-    }
 
     return true;
   } catch (err) {
@@ -820,13 +811,41 @@ export async function fetchPlayerAnswersDetail(playerId: string, leaderboardId: 
 }
 
 export async function fetchLeaderboardsSupabase(): Promise<LeaderboardInfo[]> {
+  const mergeLocalThemes = (list: LeaderboardInfo[]) => {
+    try {
+      const storedThemesStr = localStorage.getItem('trivia_custom_themes');
+      if (storedThemesStr) {
+        const storedThemes = JSON.parse(storedThemesStr);
+        return list.map(item => {
+          const checkId = item.id === 'default' ? '00000000-0000-0000-0000-000000000001' : item.id;
+          if (storedThemes[checkId]) {
+            return { ...item, ...storedThemes[checkId] };
+          }
+          return item;
+        });
+      }
+    } catch (e) {}
+    return list;
+  };
+
   if (isDemoMode()) {
-    return fetchLeaderboards().map(b => ({
+    const raw = fetchLeaderboards().map(b => ({
       id: b.id === 'default' ? '00000000-0000-0000-0000-000000000001' : b.id,
       name: b.name,
       status: b.status as any,
-      created_at: b.created_at
+      created_at: b.created_at,
+      prize_title: b.prize_title,
+      prize_description: b.prize_description,
+      prize_image_url: b.prize_image_url,
+      prize_sponsor: b.prize_sponsor,
+      prize_top_n: b.prize_top_n,
+      logo_url: b.logo_url,
+      background_image_url: b.background_image_url,
+      theme_primary: b.theme_primary,
+      theme_secondary: b.theme_secondary,
+      theme_card_bg: b.theme_card_bg,
     }));
+    return mergeLocalThemes(raw);
   }
 
   try {
@@ -836,10 +855,10 @@ export async function fetchLeaderboardsSupabase(): Promise<LeaderboardInfo[]> {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return mergeLocalThemes(data || []);
   } catch (err) {
     console.warn('Failed to fetch leaderboards list from Supabase, returning simulated ones:', err);
-    return [
+    const raw = [
       {
         id: '00000000-0000-0000-0000-000000000001',
         name: 'Trivia Corporativa (Supabase)',
@@ -847,6 +866,7 @@ export async function fetchLeaderboardsSupabase(): Promise<LeaderboardInfo[]> {
         created_at: new Date().toISOString()
       }
     ];
+    return mergeLocalThemes(raw);
   }
 }
 

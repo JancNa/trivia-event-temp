@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useMemo } from "react";
-import { Link, useParams } from "react-router-dom";
+import React, { useState, useEffect, useMemo } from "react";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { LeaderboardRow, LeaderboardInfo } from "../types";
 import {
   fetchLeaderboard,
@@ -33,7 +33,19 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
+const ensureHex = (color?: string, fallback: string = "#fed600"): string => {
+  if (!color) return fallback;
+  const trimmed = color.trim();
+  if (!trimmed) return fallback;
+  if (trimmed.startsWith("#")) return trimmed;
+  if (/^[0-9A-Fa-f]{3,8}$/.test(trimmed)) {
+    return `#${trimmed}`;
+  }
+  return trimmed;
+};
+
 export default function LeaderboardView() {
+  const navigate = useNavigate();
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [latestActivity, setLatestActivity] = useState<string>("");
@@ -48,14 +60,20 @@ export default function LeaderboardView() {
         localStorage.setItem("view_selected_leaderboard_id", leaderboardId);
         return leaderboardId;
       }
-      return localStorage.getItem("view_selected_leaderboard_id");
+      // Direct access to /leaderboard should always demand a new selection first
+      return null;
     },
   );
 
   useEffect(() => {
-    if (leaderboardId && leaderboardId !== viewLeaderboardId) {
-      setViewLeaderboardId(leaderboardId);
-      localStorage.setItem("view_selected_leaderboard_id", leaderboardId);
+    if (leaderboardId) {
+      if (leaderboardId !== viewLeaderboardId) {
+        setViewLeaderboardId(leaderboardId);
+        localStorage.setItem("view_selected_leaderboard_id", leaderboardId);
+      }
+    } else {
+      // Direct access to /leaderboard should always demand a new selection first
+      setViewLeaderboardId(null);
     }
   }, [leaderboardId]);
 
@@ -65,6 +83,7 @@ export default function LeaderboardView() {
   const [loadingBoards, setLoadingBoards] = useState(false);
   const [activeLeaderboard, setActiveLeaderboard] =
     useState<LeaderboardInfo | null>(null);
+  const [hoveredBoardId, setHoveredBoardId] = useState<string | null>(null);
 
   // 1. Initial Load and Subscription Setup
   const loadData = async (
@@ -275,6 +294,10 @@ export default function LeaderboardView() {
                 {leaderboardsList.map((board) => {
                   const isRegistration = board.status === "registration";
                   const isResults = board.status === "results";
+                  const boardPrimary = ensureHex(board.theme_primary, "#fed600");
+                  const boardSecondary = ensureHex(board.theme_secondary, "#111211");
+                  const isHovered = hoveredBoardId === board.id;
+
                   return (
                     <button
                       key={board.id}
@@ -284,14 +307,26 @@ export default function LeaderboardView() {
                           board.id,
                         );
                         setViewLeaderboardId(board.id);
+                        navigate(`/leaderboard/${board.id}`);
                       }}
-                      className="w-full text-left p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200/60 flex items-center justify-between transition-all duration-200 cursor-pointer group active:scale-[0.99]"
+                      onMouseEnter={() => setHoveredBoardId(board.id)}
+                      onMouseLeave={() => setHoveredBoardId(null)}
+                      className="w-full text-left p-4 rounded-2xl bg-slate-50 border flex items-center justify-between transition-all duration-250 cursor-pointer active:scale-[0.99]"
+                      style={{
+                        borderColor: isHovered ? boardPrimary : "rgba(226, 232, 240, 0.6)",
+                        backgroundColor: isHovered ? `${boardPrimary}0b` : "rgba(248, 250, 252, 0.8)",
+                      }}
                     >
                       <div className="flex-1 min-w-0 pr-2">
                         <span className="text-[10px] font-mono text-slate-400 font-semibold block mb-0.5">
                           {new Date(board.created_at).toLocaleDateString()}
                         </span>
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-800 truncate group-hover:text-[#fed600] transition-colors">
+                        <h4 
+                          className="text-xs sm:text-sm font-bold truncate transition-colors duration-250 font-display"
+                          style={{
+                            color: isHovered ? boardPrimary : "#1e293b",
+                          }}
+                        >
                           {board.name}
                         </h4>
                         <div className="flex items-center gap-1.5 mt-2">
@@ -321,7 +356,12 @@ export default function LeaderboardView() {
                           </span>
                         </div>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#fed600] transition-colors shrink-0" />
+                      <ChevronRight 
+                        className="w-4 h-4 transition-colors shrink-0" 
+                        style={{
+                          color: isHovered ? boardPrimary : "#94a3b8",
+                        }}
+                      />
                     </button>
                   );
                 })}
@@ -350,8 +390,8 @@ export default function LeaderboardView() {
     );
   }
 
-  const primaryColor = activeLeaderboard?.theme_primary || "#fed600";
-  const secondaryColor = activeLeaderboard?.theme_secondary || "#111211";
+  const primaryColor = ensureHex(activeLeaderboard?.theme_primary, "#fed600");
+  const secondaryColor = ensureHex(activeLeaderboard?.theme_secondary, "#111211");
   const cardBgStyle = activeLeaderboard?.theme_card_bg || "light";
 
   return (
@@ -372,120 +412,201 @@ export default function LeaderboardView() {
           --brand-secondary: ${secondaryColor};
         }
         
-        /* Specific element dynamic customizations */
+        /* Specific element dynamic customizations with supreme specificity */
+        #leaderboard_primary_board .text-brand-yellow,
+        #leaderboard-full-ranking .text-brand-yellow,
         .text-brand-yellow {
           color: ${primaryColor} !important;
         }
+        #leaderboard_primary_board .bg-brand-yellow,
+        #leaderboard-full-ranking .bg-brand-yellow,
         .bg-brand-yellow {
           background-color: ${primaryColor} !important;
         }
+        #leaderboard_primary_board .border-brand-yellow,
+        #leaderboard-full-ranking .border-brand-yellow,
         .border-brand-yellow {
           border-color: ${primaryColor} !important;
         }
+        
+        #leaderboard_primary_board .text-\[\#fed600\],
+        #leaderboard-full-ranking .text-\[\#fed600\],
         .text-\[\#fed600\] {
           color: ${primaryColor} !important;
         }
+        #leaderboard_primary_board .bg-\[\#fed600\],
+        #leaderboard-full-ranking .bg-\[\#fed600\],
         .bg-\[\#fed600\] {
           background-color: ${primaryColor} !important;
         }
+        #leaderboard_primary_board .border-\[\#fed600\],
+        #leaderboard-full-ranking .border-\[\#fed600\],
         .border-\[\#fed600\] {
           border-color: ${primaryColor} !important;
         }
+        
+        #leaderboard_primary_board .hover\:text-\[\#fed600\]:hover,
+        #leaderboard-full-ranking .hover\:text-\[\#fed600\]:hover,
+        .hover\:text-\[\#fed600\]:hover {
+          color: ${primaryColor} !important;
+        }
+        #leaderboard_primary_board .group-hover\:text-\[\#fed600\],
+        #leaderboard-full-ranking .group-hover\:text-\[\#fed600\],
+        .group-hover\:text-\[\#fed600\] {
+          color: ${primaryColor} !important;
+        }
+        #leaderboard_primary_board .group:hover .group-hover\:text-\[\#fed600\],
+        #leaderboard_primary_board .group:hover .group-hover\:border-\[\#fed600\],
+        .group:hover .group-hover\:text-\[\#fed600\],
+        .group:hover .group-hover\:border-\[\#fed600\] {
+          color: ${primaryColor} !important;
+          border-color: ${primaryColor} !important;
+        }
+        
+        #leaderboard_primary_board .bg-\[\#111211\],
+        #leaderboard-full-ranking .bg-\[\#111211\],
         .bg-\[\#111211\] {
           background-color: ${secondaryColor} !important;
         }
+        #leaderboard_primary_board .text-\[\#111211\],
+        #leaderboard-full-ranking .text-\[\#111211\],
         .text-\[\#111211\] {
           color: ${secondaryColor} !important;
         }
+        
+        #leaderboard_primary_board .text-\[\#e5b300\],
+        #leaderboard-full-ranking .text-\[\#e5b300\],
         .text-\[\#e5b300\] {
           color: ${primaryColor} !important;
           filter: brightness(1.2);
         }
+        
+        #leaderboard_primary_board .bg-\[\#fed600\]\/10,
+        #leaderboard-full-ranking .bg-\[\#fed600\]\/10,
         .bg-\[\#fed600\]\/10 {
           background-color: ${primaryColor}1a !important;
         }
+        #leaderboard_primary_board .bg-\[\#fed600\]\/80,
+        #leaderboard-full-ranking .bg-\[\#fed600\]\/80,
+        .bg-\[\#fed600\]\/80 {
+          background-color: ${primaryColor}cc !important;
+        }
+        #leaderboard_primary_board .bg-\[\#fed600\]\/25,
+        #leaderboard-full-ranking .bg-\[\#fed600\]\/25,
+        .bg-\[\#fed600\]\/25 {
+          background-color: ${primaryColor}40 !important;
+        }
+        #leaderboard_primary_board .border-\[\#fed600\]\/30,
+        #leaderboard-full-ranking .border-\[\#fed600\]\/30,
         .border-\[\#fed600\]\/30 {
           border-color: ${primaryColor}4d !important;
+        }
+        #leaderboard_primary_board .border-\[\#fed600\]\/25,
+        #leaderboard-full-ranking .border-\[\#fed600\]\/25,
+        .border-\[\#fed600\]\/25 {
+          border-color: ${primaryColor}40 !important;
+        }
+        #leaderboard_primary_board .hover\:border-\[\#fed600\]:hover,
+        #leaderboard-full-ranking .hover\:border-\[\#fed600\]:hover,
+        .hover\:border-\[\#fed600\]:hover {
+          border-color: ${primaryColor} !important;
+        }
+        #leaderboard_primary_board .border-l-\[\#fed600\],
+        #leaderboard-full-ranking .border-l-\[\#fed600\],
+        .border-l-\[\#fed600\] {
+          border-left-color: ${primaryColor} !important;
         }
         
         /* Override primary board bg container */
         #leaderboard_primary_board {
-          background-color: ${cardBgStyle === 'dark' ? '#18181b' : cardBgStyle === 'glass' ? 'rgba(15, 15, 17, 0.65)' : 'rgba(255, 255, 255, 0.98)'} !important;
-          color: ${cardBgStyle === 'light' ? '#334155' : '#f8fafc'} !important;
-          border-color: ${cardBgStyle === 'glass' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.2)'} !important;
-          backdrop-filter: ${cardBgStyle === 'glass' ? 'blur(28px)' : 'none'} !important;
+          background-color: #fafafa !important;
+          color: #111211 !important;
+          border-color: rgba(226, 232, 240, 0.8) !important;
+          backdrop-filter: none !important;
         }
         
         /* Stats divisions block bg */
         #leaderboard_primary_board .bg-\[\#fafafa\] {
-          background-[#fee134]
-          background-color: ${cardBgStyle === 'dark' ? '#1f1f23' : cardBgStyle === 'glass' ? 'rgba(255, 255, 255, 0.03)' : '#fafafa'} !important;
-          border-color: ${cardBgStyle === 'dark' ? '#27272a' : cardBgStyle === 'glass' ? 'rgba(255, 255, 255, 0.05)' : '#f1f5f9'} !important;
+          background-color: #f5f5f5 !important;
+          border-color: #e2e8f0 !important;
         }
         
         #leaderboard_primary_board .divide-slate-100 > * + * {
-          border-color: ${cardBgStyle === 'dark' ? '#27272a' : cardBgStyle === 'glass' ? 'rgba(255, 255, 255, 0.05)' : '#e2e8f0'} !important;
+          border-color: #e2e8f0 !important;
         }
         
         /* Accordion items */
         .overflow-hidden.bg-\[\#fafafb\]\/85 {
-          background-color: ${cardBgStyle === 'dark' ? '#1c1c1f' : cardBgStyle === 'glass' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(250, 250, 251, 0.85)'} !important;
+          background-color: #fafafa !important;
         }
         
         /* Table rows and borders style */
         #leaderboard-full-ranking {
-          background-color: ${cardBgStyle === 'dark' ? '#1f1f23' : cardBgStyle === 'glass' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(252, 251, 251, 0.5)'} !important;
-          border-color: ${cardBgStyle === 'dark' ? '#27272a' : cardBgStyle === 'glass' ? 'rgba(255, 255, 255, 0.05)' : '#f1f5f9'} !important;
+          background-color: #fafafa !important;
+          border-color: #e2e8f0 !important;
         }
         
         #leaderboard-full-ranking .divide-slate-100 > * + * {
-          border-color: ${cardBgStyle === 'dark' ? '#27272a' : cardBgStyle === 'glass' ? 'rgba(255, 255, 255, 0.05)' : '#f1f5f9'} !important;
+          border-color: #e2e8f0 !important;
         }
         
         #leaderboard-full-ranking .bg-white {
-          background-color: ${cardBgStyle === 'dark' ? '#18181b' : cardBgStyle === 'glass' ? 'transparent' : '#ffffff'} !important;
-          color: ${cardBgStyle === 'light' ? '#334155' : '#f8fafc'} !important;
+          background-color: #ffffff !important;
+          color: #111211 !important;
         }
         
         #leaderboard-full-ranking .bg-white:hover {
-          background-color: ${cardBgStyle === 'dark' ? '#27272a' : cardBgStyle === 'glass' ? 'rgba(255, 255, 255, 0.06)' : '#f8fafc'} !important;
+          background-color: #f1f5f9 !important;
         }
         
         #leaderboard-full-ranking .hover\:border-\[\#fed600\]:hover {
           border-left-color: ${primaryColor} !important;
         }
         
-        /* Accent overrides for dark theme */
-        ${cardBgStyle !== 'light' ? `
-          #leaderboard_primary_board h3,
-          #leaderboard_primary_board h4,
-          #leaderboard_primary_board span,
-          #leaderboard_primary_board p,
-          #leaderboard_primary_board td,
-          #leaderboard_primary_board th {
-            color: #e2e8f0 !important;
-          }
-          
-          #leaderboard_primary_board .text-[#111211] {
-            color: #ffffff !important;
-          }
-          
-          #leaderboard_primary_board .text-slate-800,
-          #leaderboard_primary_board .text-slate-700,
-          #leaderboard_primary_board .text-slate-600 {
-            color: #cbd5e1 !important;
-          }
-          
-          #leaderboard_primary_board .text-slate-500,
-          #leaderboard_primary_board .text-slate-400 {
-            color: #94a3b8 !important;
-          }
-        ` : ''}
+        /* General texts under #leaderboard_primary_board should be charcoal #111211 */
+        #leaderboard_primary_board h2,
+        #leaderboard_primary_board h3,
+        #leaderboard_primary_board h4,
+        #leaderboard_primary_board p,
+        #leaderboard_primary_board td,
+        #leaderboard_primary_board th,
+        #leaderboard_primary_board button {
+          color: #111211 !important;
+        }
+        
+        #leaderboard_primary_board span:not(.text-brand-yellow):not(.text-\\[\\#fed600\\]):not(.text-\\[\\#e5b300\\]):not(.rank-number) {
+          color: #111211 !important;
+        }
+        
+        #leaderboard_primary_board .text-[#111211],
+        #leaderboard_primary_board .text-slate-800,
+        #leaderboard_primary_board .text-slate-700,
+        #leaderboard_primary_board .text-slate-600,
+        #leaderboard_primary_board .text-slate-500,
+        #leaderboard_primary_board .text-slate-400 {
+          color: #111211 !important;
+        }
       `}</style>
 
       {/* Floating Quiet Control Utilities Bar at the very top */}
-      <div className="absolute top-4 left-4 right-4 z-50 flex items-center justify-between pointer-events-none text-transparent">
+      <div className="absolute top-4 left-4 right-4 z-50 flex items-center justify-between pointer-events-none">
         <div className="flex items-center gap-2 pointer-events-auto">
+          <Link
+            to="/"
+            className="px-4 py-2 bg-black/40 hover:bg-black/60 border border-white/10 text-white hover:text-brand-yellow font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 backdrop-blur shadow-lg cursor-pointer"
+          >
+            <span>← Volver al Portal</span>
+          </Link>
+          <button
+            onClick={() => {
+              setViewLeaderboardId(null);
+              navigate("/leaderboard");
+            }}
+            className="px-4 py-2 bg-black/40 hover:bg-black/60 border border-white/10 text-white hover:text-brand-yellow font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 backdrop-blur shadow-lg cursor-pointer"
+          >
+            <Trophy className="w-3.5 h-3.5 shrink-0" />
+            <span>📊 Cambiar Trivia</span>
+          </button>
         </div>
       </div>
 
@@ -508,8 +629,8 @@ export default function LeaderboardView() {
                 {/* Pointy speech tail at 10 o'clock position */}
                 <path
                   d="M 50,14 A 36,36 0 1,1 22,28 L 5,14 L 28,22 A 36,36 0 0,1 50,14 Z"
-                  fill="#fed600"
-                  stroke="#fed600"
+                  fill={primaryColor}
+                  stroke={primaryColor}
                   strokeWidth="1.5"
                   strokeLinejoin="round"
                 />
@@ -519,7 +640,7 @@ export default function LeaderboardView() {
                   fontSize="20"
                   fontWeight="900"
                   fontFamily="'Inter', 'Outfit', system-ui, sans-serif"
-                  fill="#111211"
+                  fill={secondaryColor}
                   letterSpacing="-0.5"
                   textAnchor="middle"
                 >
@@ -529,7 +650,7 @@ export default function LeaderboardView() {
                 <path
                   d="M 39,63 A 12,12 0 0,0 63,63"
                   fill="none"
-                  stroke="#111211"
+                  stroke={secondaryColor}
                   strokeWidth="2.5"
                   strokeLinecap="round"
                 />
@@ -547,11 +668,12 @@ export default function LeaderboardView() {
           <div className="grid grid-cols-3 divide-x divide-slate-100 bg-[#fafafa] border-b border-slate-100 pt-20 pb-6 px-4 text-center">
             <div className="flex flex-col justify-center items-center">
               <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400">
-                Pactipantes
+                Participantes
               </span>
               <span
-                className="text-2xl sm:text-3.5xl font-black text-[#111211] tracking-tight mt-1"
+                className="text-2xl sm:text-3.5xl font-black tracking-tight mt-1"
                 id="metric-participants"
+                style={{ color: secondaryColor }}
               >
                 {metrics.totalPlayers.toLocaleString()}
               </span>
@@ -562,8 +684,9 @@ export default function LeaderboardView() {
                 XP Total
               </span>
               <span
-                className="text-2xl sm:text-3.5xl font-black text-[#111211] tracking-tight mt-1"
+                className="text-2xl sm:text-3.5xl font-black tracking-tight mt-1"
                 id="metric-total-xp"
+                style={{ color: secondaryColor }}
               >
                 {metrics.totalXP.toLocaleString()}
               </span>
@@ -573,7 +696,10 @@ export default function LeaderboardView() {
               <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400">
                 Ganadores
               </span>
-              <span className="text-2xl sm:text-3.5xl font-black text-[#111211] tracking-tight mt-1">
+              <span 
+                className="text-2xl sm:text-3.5xl font-black tracking-tight mt-1"
+                style={{ color: secondaryColor }}
+              >
                 TOP 1
               </span>
             </div>
@@ -586,7 +712,7 @@ export default function LeaderboardView() {
               className="w-full py-4 px-6 flex items-center justify-center gap-2 hover:bg-slate-50/60 active:bg-slate-100 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-700 transition-all cursor-pointer"
               id="btn_view_prizes_accordion"
             >
-              <Gift className="w-4 h-4 text-[#fed600] shrink-0" />
+              <Gift className="w-4 h-4 shrink-0" style={{ color: primaryColor }} />
               <span>Premios del Evento</span>
               {showPrizes ? (
                 <ChevronUp className="w-4 h-4 text-slate-400" />
@@ -719,7 +845,10 @@ export default function LeaderboardView() {
                     >
                       <div className="w-11 h-11 bg-slate-100 border-2 border-slate-300 rounded-full flex items-center justify-center text-lg shadow-sm relative z-20">
                         🥈
-                        <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#111211] text-white text-[10px] font-black rounded-full flex items-center justify-center">
+                        <span 
+                          className="absolute -bottom-1 -right-1 w-5 h-5 text-white text-[10px] font-black rounded-full flex items-center justify-center rank-number"
+                          style={{ backgroundColor: secondaryColor }}
+                        >
                           2
                         </span>
                       </div>
@@ -740,7 +869,8 @@ export default function LeaderboardView() {
                   <motion.div
                     initial={{ height: 0 }}
                     animate={{ height: podium.second ? 95 : 0 }}
-                    className="w-full bg-[#111211] rounded-t-2xl shadow-md mt-4 relative overflow-hidden"
+                    className="w-full rounded-t-2xl shadow-md mt-4 relative overflow-hidden"
+                    style={{ backgroundColor: secondaryColor }}
                   >
                     <div className="absolute inset-x-0 top-0 h-1.5 bg-white/10" />
                   </motion.div>
@@ -756,19 +886,34 @@ export default function LeaderboardView() {
                       id="podium-row-place-1"
                     >
                       {/* Top crown badge */}
-                      <div className="w-14 h-14 bg-yellow-100 border-2 border-[#fed600] rounded-full flex items-center justify-center text-2xl shadow-md relative z-20">
+                      <div 
+                        className="w-14 h-14 bg-yellow-100 border-2 rounded-full flex items-center justify-center text-2xl shadow-md relative z-20"
+                        style={{ borderColor: primaryColor }}
+                      >
                         👑
-                        <span className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#fed600] text-[#111211] text-xs font-black rounded-full flex items-center justify-center ring-2 ring-white">
+                        <span 
+                          className="absolute -bottom-1 -right-1 w-6 h-6 text-xs font-black rounded-full flex items-center justify-center ring-2 ring-white rank-number"
+                          style={{ backgroundColor: primaryColor, color: secondaryColor }}
+                        >
                           1
                         </span>
                       </div>
-                      <div className="mt-2 text-[10px] font-black text-[#fed600] uppercase tracking-widest bg-[#111211] px-2 py-0.5 rounded-full select-none">
+                      <div 
+                        className="mt-2 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full select-none"
+                        style={{ backgroundColor: secondaryColor, color: primaryColor }}
+                      >
                         Ganador
                       </div>
-                      <div className="mt-1.5 font-display text-sm sm:text-base font-black text-[#111211] truncate max-w-[110px] uppercase tracking-wide">
+                      <div 
+                        className="mt-1.5 font-display text-sm sm:text-base font-black truncate max-w-[110px] uppercase tracking-wide"
+                        style={{ color: secondaryColor }}
+                      >
                         {podium.first.player_name || ""}
                       </div>
-                      <div className="text-sm font-black text-[#fed600] drop-shadow-sm font-mono mt-0.5">
+                      <div 
+                        className="text-sm font-black drop-shadow-sm font-mono mt-0.5"
+                        style={{ color: primaryColor }}
+                      >
                         {Number(podium.first.total_xp).toLocaleString()}{" "}
                         <span className="text-[11px] font-bold">XP</span>
                       </div>
@@ -782,7 +927,11 @@ export default function LeaderboardView() {
                   <motion.div
                     initial={{ height: 0 }}
                     animate={{ height: podium.first ? 135 : 0 }}
-                    className="w-full bg-[#fed600] rounded-t-2xl shadow-[0_4px_25px_rgba(254,214,0,0.35)] mt-4 relative overflow-hidden"
+                    className="w-full rounded-t-2xl mt-4 relative overflow-hidden"
+                    style={{ 
+                      backgroundColor: primaryColor,
+                      boxShadow: `0 4px 25px ${primaryColor}55`
+                    }}
                   >
                     <div className="absolute inset-x-0 top-0 h-2 bg-white/40" />
                   </motion.div>
@@ -800,7 +949,7 @@ export default function LeaderboardView() {
                     >
                       <div className="w-11 h-11 bg-slate-100 border-2 border-slate-300 rounded-full flex items-center justify-center text-lg shadow-sm relative z-20">
                         🥉
-                        <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-slate-500 text-white text-[10px] font-black rounded-full flex items-center justify-center">
+                        <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-slate-500 text-white text-[10px] font-black rounded-full flex items-center justify-center rank-number">
                           3
                         </span>
                       </div>
@@ -846,21 +995,21 @@ export default function LeaderboardView() {
                     const isTop3 = row.rank <= 3;
 
                     let medalBadge = null;
-                    let numBadgeClass = "text-slate-400";
-                    let bgCircle = "bg-slate-100";
+                    let numBadgeStyle: React.CSSProperties = { color: "#94a3b8" };
+                    let bgCircleStyle: React.CSSProperties = { backgroundColor: "rgba(241, 245, 249, 1)" };
 
                     if (isRank1) {
-                      bgCircle = "bg-[#fed600] text-[#111211]";
-                      numBadgeClass = "text-[#111211] font-black";
+                      bgCircleStyle = { backgroundColor: primaryColor, color: secondaryColor };
+                      numBadgeStyle = { color: secondaryColor, fontWeight: "900" };
                     } else if (isRank2) {
-                      bgCircle = "bg-[#111211] text-white";
-                      numBadgeClass = "text-white font-black";
+                      bgCircleStyle = { backgroundColor: secondaryColor, color: "white" };
+                      numBadgeStyle = { color: "white", fontWeight: "900" };
                     } else if (isRank3) {
-                      bgCircle = "bg-[#4a4b4a] text-white";
-                      numBadgeClass = "text-white font-black";
+                      bgCircleStyle = { backgroundColor: "#4a4b4a", color: "white" };
+                      numBadgeStyle = { color: "white", fontWeight: "900" };
                     } else {
-                      numBadgeClass = "text-slate-500 font-bold";
-                      bgCircle = "bg-transparent";
+                      numBadgeStyle = { color: "#64748b", fontWeight: "700" };
+                      bgCircleStyle = { backgroundColor: "transparent" };
                     }
 
                     // Progress width proportional to maxScore
@@ -880,9 +1029,10 @@ export default function LeaderboardView() {
                           {/* LEFT: Rank Num avatar circle & Competitor Name */}
                         <div className="flex items-center gap-3.5 min-w-0 flex-1">
                           <div
-                            className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${bgCircle} text-xs font-mono shadow-sm`}
+                            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-mono shadow-sm"
+                            style={bgCircleStyle}
                           >
-                            <span className={numBadgeClass}>{row.rank}</span>
+                            <span className="rank-number" style={numBadgeStyle}>{row.rank}</span>
                           </div>
 
                           <div className="min-w-0 flex-1">
@@ -897,9 +1047,10 @@ export default function LeaderboardView() {
                               initial={{ width: 0 }}
                               animate={{ width: `${progressPercent}%` }}
                               transition={{ duration: 0.5 }}
-                              className={`h-full rounded-full transition-all ${
-                                isTop3 ? "bg-[#fed600]" : "bg-[#fed600]/80"
-                              }`}
+                              className="h-full rounded-full transition-all"
+                              style={{
+                                backgroundColor: isTop3 ? primaryColor : `${primaryColor}cc`
+                              }}
                             />
                           </div>
                           
@@ -922,7 +1073,16 @@ export default function LeaderboardView() {
 
                           {/* OUTLINE TROPHY BADGE (Only for #1) */}
                           {row.rank === 1 && (
-                            <div className="px-2.5 py-1.5 bg-[#fed600]/10 border border-[#fed600]/30 text-[#e5b300] text-[10px] font-extrabold uppercase rounded-lg tracking-widest flex items-center gap-1 shadow-sm select-none">
+                            <div 
+                              className="px-2.5 py-1.5 text-[10px] font-extrabold uppercase rounded-lg tracking-widest flex items-center gap-1 shadow-sm select-none"
+                              style={{
+                                backgroundColor: `${primaryColor}1a`,
+                                borderColor: `${primaryColor}4d`,
+                                color: primaryColor,
+                                borderStyle: "solid",
+                                borderWidth: "1px"
+                              }}
+                            >
                               <Trophy className="w-3.5 h-3.5 shrink-0" />
                               <span className="hidden sm:inline">Ganador</span>
                             </div>

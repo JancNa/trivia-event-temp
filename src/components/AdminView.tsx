@@ -849,7 +849,7 @@ export default function AdminView() {
       {/* MAIN VIEW AREA */}
       <main className="flex-1 min-w-0 p-4 lg:p-8 space-y-6 md:h-screen md:overflow-y-auto">
         {/* FIXED HEADER BAR */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-default/60 pb-6">
+        <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-border-default/60 pb-6">
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-brand-yellow font-bold uppercase tracking-wider font-mono">
               <Sliders className="w-3.5 h-3.5" />
@@ -940,8 +940,8 @@ export default function AdminView() {
               exit={{ opacity: 0, y: -15 }}
               className="space-y-6"
             >
-              <div className="bg-bg-subtle border border-border-default rounded-3xl p-6 shadow-xl space-y-4">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-border-default/60 pb-4 gap-4">
+              <div className="bg-bg-subtle border border-border-default rounded-3xl p-6 shadow-xl space-y-4 w-full max-w-full overflow-hidden">
+                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between border-b border-border-default/60 pb-4 gap-4">
                   <div className="space-y-1">
                     <h2 className="text-lg font-display font-semibold text-brand-light flex items-center gap-2">
                       <Trophy className="w-5 h-5 text-brand-yellow shrink-0" />
@@ -952,7 +952,7 @@ export default function AdminView() {
                       por los participantes.
                     </p>
                   </div>
-                  <div className="flex flex-col gap-2 w-full md:max-w-xl shrink-0">
+                  <div className="flex flex-col gap-2 w-full lg:max-w-xl shrink-0">
                     {/* PLAY LINK CARD */}
                     <div className="bg-neutral-900/40 border border-neutral-700/50 p-3.5 rounded-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
                       <div className="flex-1 min-w-0 break-all">
@@ -1115,8 +1115,8 @@ export default function AdminView() {
               </div>
 
               {/* PANEL DE PREMIACIÓN */}
-              <div className="bg-bg-subtle border border-border-default rounded-3xl p-6 shadow-xl space-y-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-default/60 pb-4">
+              <div className="bg-bg-subtle border border-border-default rounded-3xl p-6 shadow-xl space-y-6 w-full max-w-full overflow-hidden">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-border-default/60 pb-4">
                   <div className="space-y-1">
                     <h3 className="text-md font-display font-bold text-brand-light flex items-center gap-2">
                       <Award className="w-5 h-5 text-brand-yellow" />
@@ -1321,7 +1321,7 @@ export default function AdminView() {
               exit={{ opacity: 0, y: -15 }}
               className="space-y-6"
             >
-              <div className="bg-bg-subtle border border-border-default rounded-3xl p-6 shadow-xl space-y-4">
+              <div className="bg-bg-subtle border border-border-default rounded-3xl p-6 shadow-xl space-y-4 w-full max-w-full overflow-hidden">
                 <div className="border-b border-border-default/60 pb-3">
                   <h2 className="text-md font-display font-bold text-brand-light flex items-center gap-2">
                     <Users className="w-5 h-5 text-brand-yellow" />
@@ -1535,7 +1535,7 @@ export default function AdminView() {
               exit={{ opacity: 0, y: -15 }}
               className="space-y-6"
             >
-              <div className="bg-bg-subtle border border-border-default rounded-3xl p-6 shadow-xl space-y-4">
+              <div className="bg-bg-subtle border border-border-default rounded-3xl p-6 shadow-xl space-y-4 w-full max-w-full overflow-hidden">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-default/60 pb-4">
                   <div className="space-y-1">
                     <h2 className="text-md font-display font-bold text-brand-light flex items-center gap-2">
@@ -1676,8 +1676,8 @@ export default function AdminView() {
               className="space-y-6"
             >
               <form onSubmit={handleSaveAppearance} className="space-y-6">
-                <div className="bg-bg-subtle border border-border-default rounded-3xl p-6 shadow-xl space-y-6">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-default/60 pb-4">
+                <div className="bg-bg-subtle border border-border-default rounded-3xl p-6 shadow-xl space-y-6 w-full max-w-full overflow-hidden">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-border-default/60 pb-4">
                     <div className="space-y-1">
                       <h2 className="text-md font-display font-bold text-brand-light flex items-center gap-2">
                         <Palette className="w-5 h-5 text-brand-yellow" />

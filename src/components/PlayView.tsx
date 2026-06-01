@@ -35,6 +35,17 @@ import {
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 
+const ensureHex = (color?: string, fallback: string = "#fed600"): string => {
+  if (!color) return fallback;
+  const trimmed = color.trim();
+  if (!trimmed) return fallback;
+  if (trimmed.startsWith("#")) return trimmed;
+  if (/^[0-9A-Fa-f]{3,8}$/.test(trimmed)) {
+    return `#${trimmed}`;
+  }
+  return trimmed;
+};
+
 export default function PlayView() {
   // Screens: 'registration', 'trivia', 'results'
   const [screen, setScreen] = useState<'registration' | 'trivia' | 'results'>('registration');
@@ -450,403 +461,527 @@ export default function PlayView() {
     );
   }
 
+  const primaryColor = ensureHex(activeLeaderboard?.theme_primary, "#fed600");
+  const secondaryColor = ensureHex(activeLeaderboard?.theme_secondary, "#111211");
+  const cardBgStyle = activeLeaderboard?.theme_card_bg || "light";
+
   return (
-    <div className="min-h-screen bg-brand-dark flex flex-col justify-between" id="view-play">
+    <div
+      className="min-h-screen text-slate-800 p-4 flex flex-col justify-between relative"
+      id="view-play"
+      style={{
+        backgroundImage: `linear-gradient(rgba(17, 18, 17, 0.72), rgba(17, 18, 17, 0.82)), url('${activeLeaderboard?.background_image_url || 'https://images.unsplash.com/photo-1527018601619-a508a2be00cd?q=80&w=1600'}')`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundAttachment: "fixed",
+      }}
+    >
+      <style>{`
+        :root {
+          --brand-primary: ${primaryColor};
+          --brand-secondary: ${secondaryColor};
+        }
+        .text-brand-yellow {
+          color: ${primaryColor} !important;
+        }
+        .bg-brand-yellow {
+          background-color: ${primaryColor} !important;
+        }
+        .border-brand-yellow {
+          border-color: ${primaryColor} !important;
+        }
+        .text-\[\#fed600\] {
+          color: ${primaryColor} !important;
+        }
+        .bg-\[\#fed600\] {
+          background-color: ${primaryColor} !important;
+        }
+        .border-\[\#fed600\] {
+          border-color: ${primaryColor} !important;
+        }
+        .text-\[\#e5b300\] {
+          color: ${primaryColor} !important;
+          filter: brightness(1.2);
+        }
+        .bg-\[\#fed600\]\/10 {
+          background-color: ${primaryColor}1a !important;
+        }
+        .border-\[\#fed600\]\/30 {
+          border-color: ${primaryColor}4d !important;
+        }
+        .bg-\[\#111211\] {
+          background-color: ${secondaryColor} !important;
+        }
+        .text-\[\#111211\] {
+          color: ${secondaryColor} !important;
+        }
+
+        /* Specific card layout styling for dynamic gameplay overlay compatibility */
+        #registration-card, #results-summary-card {
+          background-color: transparent !important;
+          color: #334155 !important;
+          border: none !important;
+          border-radius: 0px !important;
+          box-shadow: none !important;
+          padding: 0px !important;
+        }
+
+        #card_question_prompt {
+          background-color: #ffffff !important;
+          color: #1e293b !important;
+          border-color: rgba(226, 232, 240, 0.8) !important;
+        }
+
+        /* Question prompt card specific text color adjustment */
+        #registration-card h2, #registration-card p, #registration-card label,
+        #card_question_prompt h3,
+        #results-summary-card h2, #results-summary-card p, #results-summary-card h3 {
+          color: #1e293b !important;
+        }
+
+        /* Dynamic answer option buttons */
+        #block_answers_options button:not(.bg-emerald-50):not(.bg-red-50):not(.bg-brand-yellow\/10) {
+          background-color: #ffffff !important;
+          color: #334155 !important;
+          border-color: rgba(226, 232, 240, 0.8) !important;
+        }
+        #block_answers_options button:not(.bg-emerald-50):not(.bg-red-50):not(.bg-brand-yellow\/10):hover {
+          border-color: ${primaryColor} !important;
+        }
+
+        /* Player name input field adaptive theme styling */
+        #input_player_name {
+          background-color: #ffffff !important;
+          color: #1e293b !important;
+          border-color: #e2e8f0 !important;
+        }
+        #input_player_name:focus {
+          border-color: ${primaryColor} !important;
+        }
+
+        /* Ranking general list item style overrides */
+        #ranking-rows-scroll > div:not(.bg-brand-yellow\/10) {
+          background-color: #ffffff !important;
+          color: #334155 !important;
+          border-color: #f1f5f9 !important;
+        }
+        #ranking-rows-scroll > div span {
+          color: #475569 !important;
+        }
+        #ranking-rows-scroll > div span.text-brand-yellow {
+          color: ${primaryColor} !important;
+        }
+      `}</style>
       
       {/* Main Container */}
       <main className="flex-1 max-w-md w-full mx-auto p-4 flex flex-col justify-center">
-        {player && screen !== 'registration' && (
-          <div className="flex justify-end items-center mb-4">
-            <div className="flex items-center gap-2 bg-bg-elevated/50 border border-border-default/50 px-3 py-1 rounded-full text-[10px] font-bold text-text-secondary">
-              <User className="w-3 h-3 text-brand-yellow" />
-              {player.name}
-            </div>
-          </div>
-        )}
-        {console.log('PlayView: Rendering with screen', screen, 'and player', player)}
-        <AnimatePresence mode="wait">
-          
-          {/* PANTALLA 1: REGISTRO */}
-          {screen === 'registration' && (
-            <motion.div
-              key="register-screen"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              className="bg-bg-subtle border border-border-default rounded-3xl p-6 shadow-2xl relative overflow-hidden"
-              id="registration-card"
-            >
-              {/* Decorative light */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-brand-yellow/10 rounded-full blur-3xl" />
+        {/* ENCLOSING GORGEOUS WHITE/FAFAFA CONTAINER CARD */}
+        <div 
+          className="bg-[#fafafa] text-slate-800 rounded-[32px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6)] border border-white/20 p-6 sm:p-8 relative overflow-hidden flex flex-col min-h-[460px] justify-between"
+          id="play-container-card"
+        >
+          {/* Subtle inside gradient background light */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-brand-yellow/10 rounded-full blur-3xl pointer-events-none" />
 
-              <div className="w-12 h-12 rounded-2xl bg-brand-yellow/10 border border-brand-yellow/20 flex items-center justify-center text-brand-yellow mb-5">
-                <Award className="w-6 h-6" />
+          {/* Active Player badge */}
+          {player && screen !== 'registration' && (
+            <div className="flex justify-between items-center mb-5 relative z-10 border-b border-slate-200/50 pb-3 shrink-0">
+              <span className="text-[10px] font-mono text-slate-400 font-extrabold uppercase tracking-widest leading-none">
+                Jugador Activo
+              </span>
+              <div className="flex items-center gap-1.5 bg-white border border-slate-200/80 px-2.5 py-1 rounded-full text-[10px] font-bold text-slate-700 shadow-sm leading-none">
+                <User className="w-3 h-3 text-brand-yellow shrink-0" style={{ color: primaryColor }} />
+                <span>{player.name}</span>
               </div>
+            </div>
+          )}
 
-              <h2 className="text-2xl font-display font-bold tracking-tight text-brand-light mb-1">
-                ¿Listo para competir?
-              </h2>
-              <p className="text-xs text-text-body mb-6">
-                Ingresa tu nombre para unirte a la dinámica interactiva de este evento y acumular puntos de XP.
-              </p>
+          {console.log('PlayView: Rendering with screen', screen, 'and player', player)}
+          <AnimatePresence mode="wait">
+            
+            {/* PANTALLA 1: REGISTRO */}
+            {screen === 'registration' && (
+              <motion.div
+                key="register-screen"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                className="flex flex-col relative"
+                id="registration-card"
+              >
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5" style={{ backgroundColor: `${primaryColor}1a`, borderColor: `${primaryColor}22`, borderWidth: "1px", color: primaryColor }}>
+                  <Award className="w-6 h-6" />
+                </div>
 
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div>
-                  <label htmlFor="name" className="block text-xs font-semibold text-text-secondary mb-1.5 uppercase tracking-wider">
-                    Tu Nombre o Apodo
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      id="input_player_name"
-                      maxLength={30}
-                      value={playerName}
-                      onChange={(e) => setPlayerName(e.target.value)}
-                      placeholder="Ej. Juan Pérez"
-                      className="w-full bg-bg-elevated border-2 border-border-default focus:border-brand-yellow focus:ring-0 rounded-2xl pl-11 pr-4 py-3.5 text-sm font-semibold text-brand-light placeholder-text-secondary outline-none transition-all"
-                      required
-                    />
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+                <h2 className="text-2xl font-display font-black tracking-tight text-slate-900 mb-1.5">
+                  ¿Listo para competir?
+                </h2>
+                <p className="text-xs text-slate-500 mb-6 leading-relaxed font-medium">
+                  Ingresa tu nombre para unirte a la dinámica interactiva de este evento y acumular puntos de XP.
+                </p>
+
+                <form onSubmit={handleRegister} className="space-y-4">
+                  <div>
+                    <label htmlFor="name" className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
+                      Tu Nombre o Apodo
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        id="input_player_name"
+                        maxLength={30}
+                        value={playerName}
+                        onChange={(e) => setPlayerName(e.target.value)}
+                        placeholder="Ej. Juan Pérez"
+                        className="w-full bg-white border-2 border-slate-200 focus:border-brand-yellow focus:ring-0 rounded-2xl pl-11 pr-4 py-3.5 text-sm font-semibold text-slate-800 placeholder-slate-400 outline-none transition-all"
+                        required
+                      />
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    </div>
+                  </div>
+
+                  {errorMsg && (
+                    <p className="text-xs text-red-700 font-medium bg-red-50 border border-red-250 px-3 py-2.5 rounded-xl">
+                      {errorMsg}
+                    </p>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={registering}
+                    className="w-full text-white px-6 py-4 rounded-2xl text-sm font-bold shadow-lg hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wide pulse-primary"
+                    style={{ backgroundColor: primaryColor, color: secondaryColor }}
+                    id="btn_start_trivia"
+                  >
+                    {registering ? 'Registrando...' : 'Iniciar Dinámica'}
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </form>
+              </motion.div>
+            )}
+
+            {/* PANTALLA 2: TRIVIA */}
+            {screen === 'trivia' && (
+              <motion.div
+                key="trivia-screen"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                className="flex flex-col gap-4 w-full"
+                id="trivia-quiz"
+              >
+                {questions.length === 0 ? (
+                  <div className="p-8 text-center" id="empty-questions-block">
+                    <HelpCircle className="w-12 h-12 mx-auto mb-4 animate-bounce" style={{ color: primaryColor }} />
+                    <h3 className="text-lg font-display font-bold text-slate-850 mb-2">Sin preguntas cargadas</h3>
+                    <p className="text-xs text-slate-500 mb-6 leading-relaxed font-semibold">
+                      Aún no se han agregado preguntas al evento. Solicita al organizador cargarlas en la pantalla de administración para iniciar.
+                    </p>
+                    <button 
+                      onClick={handleRestartLocal}
+                      className="px-4 py-2 bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 rounded-xl hover:bg-slate-200 cursor-pointer transition-all"
+                    >
+                      Regresar al menú
+                    </button>
+                  </div>
+                ) : currentIdx >= questions.length ? (
+                  <div className="p-8 text-center">
+                    <Sparkles className="w-12 h-12 mx-auto mb-4 animate-pulse" style={{ color: primaryColor }} />
+                    <h3 className="text-lg font-display font-bold text-slate-850 mb-2">¡Completaste la Trivia!</h3>
+                    <p className="text-xs text-slate-500 mb-6 font-semibold animate-pulse">
+                      Procesando tus respuestas finales...
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Status header & visual progress */}
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-xs font-mono text-slate-400 font-extrabold uppercase tracking-widest">
+                        Pregunta <span className="font-black text-slate-700" style={{ color: primaryColor }}>{currentIdx + 1}</span> de {questions.length}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-black uppercase text-slate-700 bg-white px-2.5 py-1 rounded-full border border-slate-200/80 flex items-center gap-1.5 shadow-sm">
+                          <Zap className="w-3 h-3" style={{ color: primaryColor }} />
+                           +{questions[currentIdx].xp_value} XP
+                        </span>
+                        <span className="text-[10px] font-black uppercase text-slate-700 bg-white px-2.5 py-1 rounded-full border border-slate-200/80 flex items-center gap-1.5 shadow-sm">
+                          {totalXP} XP
+                        </span>
+                      </span>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="w-full bg-slate-200/60 h-2 rounded-full overflow-hidden border border-slate-250/20">
+                      <div 
+                        className="h-full rounded-full transition-all duration-300" 
+                        style={{ width: `${((currentIdx + 1) / questions.length) * 100}%`, backgroundColor: primaryColor }}
+                      />
+                    </div>
+
+                    {/* Question Prompt Card */}
+                    <div className="bg-white border border-slate-200/80 rounded-[24px] p-5 shadow-sm relative overflow-hidden" id="card_question_prompt">
+                      {/* Timer indicator */}
+                      {questions[currentIdx].time_limit_seconds ? (
+                        <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200 rounded-full text-xs font-bold font-mono">
+                          <Clock className={`w-3.5 h-3.5 ${timeLeft <= 3 ? 'text-red-500 animate-pulse' : ''}`} style={{ color: timeLeft <= 3 ? '#ef4444' : primaryColor }} />
+                          <span className={timeLeft <= 3 ? 'text-red-500 font-black' : 'text-slate-600'}>
+                            {timeLeft}s
+                          </span>
+                        </div>
+                      ) : null}
+
+                      <div className="pt-4 pb-2">
+                        <h3 className="text-sm sm:text-base font-display font-bold text-slate-800 leading-relaxed">
+                          {questions[currentIdx].question}
+                        </h3>
+                      </div>
+                    </div>
+
+                    {/* Options List */}
+                    <div className="space-y-3" id="block_answers_options">
+                      {(['a', 'b', 'c', 'd'] as const).map((opt) => {
+                        const optionText = questions[currentIdx][`option_${opt}` as keyof Question];
+                        if (!optionText) return null;
+
+                        // Styles determination
+                        const isSelected = selectedOpt === opt;
+                        const isCorrectAnswer = opt === questions[currentIdx].correct_option;
+                        let btnStyle = 'border-2 border-slate-200 bg-white text-slate-700 hover:border-slate-400 active:scale-[0.99]';
+                        let iconEl = null;
+
+                        if (feedback) {
+                          if (isCorrectAnswer) {
+                            btnStyle = 'border-2 border-emerald-500 bg-emerald-50 text-emerald-800 font-bold';
+                            iconEl = <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />;
+                          } else if (isSelected) {
+                            btnStyle = 'border-2 border-red-500 bg-red-50 text-red-700 font-bold';
+                            iconEl = <XCircle className="w-4 h-4 text-red-600 shrink-0" />;
+                          } else {
+                            btnStyle = 'border border-slate-100 bg-slate-50 text-slate-400 opacity-40';
+                          }
+                        } else if (isSelected) {
+                          btnStyle = 'border-2 font-bold';
+                        }
+
+                        return (
+                          <button
+                            key={opt}
+                            onClick={() => handleAnswerSubmit(opt)}
+                            disabled={feedback !== null || submittingAnswer}
+                            className={`w-full p-4 rounded-2xl flex items-center gap-3 text-left text-sm font-semibold transition-all cursor-pointer ${btnStyle}`}
+                            style={(!feedback && isSelected) ? { borderColor: primaryColor, backgroundColor: `${primaryColor}11`, color: secondaryColor } : undefined}
+                            id={`btn_option_${opt}`}
+                          >
+                            {/* Option badge */}
+                            <div className="w-7 h-7 rounded-lg flex items-center justify-center font-display font-bold text-xs uppercase shrink-0 transition-colors"
+                                 style={
+                                   feedback
+                                     ? isCorrectAnswer
+                                       ? { backgroundColor: '#10b981', color: 'white' }
+                                       : isSelected
+                                         ? { backgroundColor: '#ef4444', color: 'white' }
+                                         : { backgroundColor: '#f1f5f9', color: '#94a3b8' }
+                                     : isSelected
+                                       ? { backgroundColor: primaryColor, color: secondaryColor }
+                                       : { backgroundColor: '#f1f5f9', color: '#64748b' }
+                                 }>
+                              {opt}
+                            </div>
+
+                            <span className="flex-1 text-sm leading-tight pr-2">
+                              {optionText}
+                            </span>
+
+                            {iconEl}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Feedback Banner Overlay */}
+                    <AnimatePresence>
+                      {feedback && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 10 }}
+                          className={`p-4 rounded-2xl border text-center font-bold text-sm shadow-xl flex items-center justify-center gap-2 ${
+                            feedback.isCorrect
+                              ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                              : 'bg-red-50 border-red-300 text-red-800'
+                          }`}
+                          id="feedback_box"
+                        >
+                          {feedback.isCorrect ? (
+                            <>
+                              <Sparkles className="w-4 h-4 text-emerald-600 animate-spin" />
+                              <span>¡Correcto! Ganaste <span className="text-emerald-700 font-extrabold font-mono text-base">+{feedback.xpEarned} XP</span></span>
+                            </>
+                          ) : (
+                            <>
+                              <XCircle className="w-4 h-4 text-red-600 animate-bounce" />
+                              <span>Incorrecto. ¡Sigue intentando! <span className="font-mono text-red-700">(0 XP)</span></span>
+                            </>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </>
+                )}
+              </motion.div>
+            )}
+
+            {/* PANTALLA 3: RESULTADOS PERSONALES CON TABLA DE RANKING COMPLETA */}
+            {screen === 'results' && (
+              <motion.div
+                key="results-screen"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="flex flex-col items-stretch text-left relative w-full"
+                id="results-summary-card"
+              >
+                {/* Gold light burst decoration */}
+                <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-48 h-48 bg-brand-yellow/10 rounded-full blur-3xl pointer-events-none" />
+
+                <div className="flex items-center gap-3 mb-5 border-b border-slate-200/50 pb-3 relative z-10 shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-brand-yellow/10 border border-brand-yellow/25 flex items-center justify-center text-brand-yellow shrink-0" style={{ backgroundColor: `${primaryColor}1a`, borderColor: `${primaryColor}25`, color: primaryColor }}>
+                    <Trophy className="w-5 h-5 shrink-0" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-display font-black tracking-tight text-slate-900">
+                      ¡Trivia Completada!
+                    </h2>
+                    <p className="text-[11px] text-slate-400 font-bold">
+                      {player ? `Gran partida, ${player.name}.` : 'Revisa tu lugar en el podio.'}
+                    </p>
                   </div>
                 </div>
 
-                {errorMsg && (
-                  <p className="text-xs text-red-700 font-medium bg-red-50 border border-red-250 px-3 py-2.5 rounded-xl">
-                    {errorMsg}
-                  </p>
+                {/* Scorecard grids */}
+                <div className="grid grid-cols-3 gap-2 mb-4 relative z-10 shrink-0">
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-2.5 flex flex-col items-center shadow-sm">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5 text-center leading-none">
+                      XP GANADOS
+                    </span>
+                    <span className="text-sm font-mono font-black" style={{ color: primaryColor }}>
+                      {totalXP.toLocaleString()}
+                    </span>
+                  </div>
+                  
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-2.5 flex flex-col items-center shadow-sm">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5 text-center leading-none">
+                      ACIERTOS
+                    </span>
+                    <span className="text-sm font-mono font-black text-emerald-500">
+                      {totalCorrect} <span className="text-[10px] text-slate-400 font-bold font-sans">/ {questions.length}</span>
+                    </span>
+                  </div>
+
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-2.5 flex flex-col items-center shadow-sm">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5 text-center leading-none">
+                      POSICIÓN
+                    </span>
+                    <span className="text-sm font-mono font-black animate-pulse" style={{ color: primaryColor }}>
+                      {playerRank !== null ? `#${playerRank}` : '#--'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* MOTIVATIONAL BANNER */}
+                {playerRank !== null && (
+                  <div className="bg-white border border-slate-200/60 rounded-2xl px-3 py-2.5 text-[11px] text-slate-650 leading-relaxed mb-4 text-center font-bold shadow-sm relative z-10 shrink-0">
+                    {getMotivationalMessage(playerRank)}
+                  </div>
                 )}
 
-                <button
-                  type="submit"
-                  disabled={registering}
-                  className="w-full bg-brand-yellow text-[#111211] px-6 py-4 rounded-2xl text-sm font-bold shadow-lg shadow-brand-yellow/10 hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wide pulse-primary"
-                  id="btn_start_trivia"
-                >
-                  {registering ? 'Registrando...' : 'Iniciar Dinámica'}
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </form>
-            </motion.div>
-          )}
+                {/* Leaderboard associated with the complete ranking */}
+                <div className="flex-1 flex flex-col min-h-[200px] max-h-[280px] overflow-hidden" id="ranking-container">
+                  <div className="flex items-center justify-between mb-3 shrink-0">
+                    <h3 className="text-xs font-display font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                      <Award className="w-4 h-4" style={{ color: primaryColor }} />
+                      <span>Ranking General</span>
+                    </h3>
+                    {loadingRank && (
+                      <span className="flex items-center gap-1 text-[9px] font-mono font-bold animate-pulse" style={{ color: primaryColor }}>
+                        <RefreshCw className="w-3 h-3 animate-spin" />
+                        Actualizando...
+                      </span>
+                    )}
+                  </div>
 
-          {/* PANTALLA 2: TRIVIA */}
-          {screen === 'trivia' && (
-            <motion.div
-              key="trivia-screen"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              className="flex flex-col gap-4"
-              id="trivia-quiz"
-            >
-              {questions.length === 0 ? (
-                <div className="bg-bg-subtle border border-border-default rounded-3xl p-8 text-center" id="empty-questions-block">
-                  <HelpCircle className="w-12 h-12 text-brand-yellow mx-auto mb-4 animate-bounce" />
-                  <h3 className="text-lg font-display font-bold text-brand-light mb-2">Sin preguntas cargadas</h3>
-                  <p className="text-xs text-text-body mb-6 leading-relaxed">
-                    Aún no se han agregado preguntas al evento. Solicita al organizador cargarlas en la pantalla de administración para iniciar.
-                  </p>
-                  <button 
-                    onClick={handleRestartLocal}
-                    className="px-4 py-2 bg-bg-elevated border border-border-default text-xs font-bold text-brand-light rounded-xl hover:brightness-110 cursor-pointer transition-all"
+                  <div className="overflow-y-auto space-y-2 flex-1 pr-1" id="ranking-rows-scroll">
+                    {leaderboardRows.length === 0 ? (
+                      <div className="text-center py-10 text-xs text-slate-400 bg-white border border-dashed border-slate-200 rounded-2xl shadow-sm">
+                        Cargando jugadores registrados...
+                      </div>
+                    ) : (
+                      leaderboardRows.map((row) => {
+                        const isCurrentPlayer = player && row.player_id === player.id;
+                        return (
+                          <div
+                            key={row.player_id || row.id}
+                            className={`flex items-center justify-between p-3 rounded-xl text-xs transition-all border ${
+                              isCurrentPlayer
+                                ? 'bg-white font-black ring-2 shadow-sm'
+                                : 'bg-white border-slate-200/60 hover:border-slate-300 text-slate-700 shadow-sm'
+                            }`}
+                            style={isCurrentPlayer ? { borderColor: primaryColor, ringColor: primaryColor } : undefined}
+                            id={`ranking_row_${row.player_id}`}
+                          >
+                            <div className="flex items-center gap-2 truncate">
+                              <span className="w-5.5 h-5.5 rounded-lg text-[9px] font-mono font-bold flex items-center justify-center shrink-0"
+                                    style={
+                                      row.rank === 1
+                                        ? { backgroundColor: primaryColor, color: secondaryColor, fontWeight: '900' }
+                                        : row.rank === 2
+                                          ? { backgroundColor: '#e2e8f0', color: '#475569', fontWeight: '900' }
+                                          : row.rank === 3
+                                            ? { backgroundColor: '#ffedd5', color: '#c2410c', fontWeight: '900' }
+                                            : { backgroundColor: '#f8fafc', borderColor: '#e2e8f0', borderStyle: 'solid', borderWidth: '1px', color: '#64748b' }
+                                    }>
+                                #{row.rank}
+                              </span>
+                              <span className="truncate font-semibold text-xs text-slate-800">
+                                {row.name} {isCurrentPlayer && <span className="text-[10px] font-bold font-mono" style={{ color: primaryColor }}>(Tú)</span>}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 font-mono text-[11px] shrink-0">
+                              <span className="text-emerald-600 font-extrabold shrink-0" title="Respuestas correctas">
+                                {row.correct_answers || 0} ✓
+                              </span>
+                              <span className="text-slate-200">•</span>
+                              <span className="font-extrabold shrink-0 text-xs text-nowrap" style={{ color: primaryColor }}>
+                                {(row.total_xp || 0).toLocaleString()} XP
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions footer wrapper wrapper */}
+                <div className="grid grid-cols-1 gap-2 mt-5 pt-4 border-t border-slate-200 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/leaderboard/${playLeaderboardId}`)}
+                    className="py-3 font-bold rounded-xl text-xs cursor-pointer hover:brightness-110 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 shadow-md text-white"
+                    style={{ backgroundColor: primaryColor, color: secondaryColor }}
+                    id="btn_view_leaderboard"
                   >
-                    Regresar al menú
+                    <Trophy className="w-3.5 h-3.5" />
+                    Ver Leaderboard
                   </button>
                 </div>
-              ) : currentIdx >= questions.length ? (
-                <div className="bg-bg-subtle border border-border-default rounded-3xl p-8 text-center">
-                  <Sparkles className="w-12 h-12 text-brand-yellow mx-auto mb-4" />
-                  <h3 className="text-lg font-display font-bold text-brand-light mb-2">¡Completaste la Trivia!</h3>
-                  <p className="text-xs text-text-body mb-6">
-                    Procesando tus respuestas finales...
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {/* Status header & visual progress */}
-                  <div className="flex items-center justify-between px-1">
-                    <span className="text-xs font-mono text-text-secondary uppercase tracking-widest">
-                      Pregunta <span className="text-brand-yellow font-bold">{currentIdx + 1}</span> de {questions.length}
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <span className="text-xs font-bold bg-bg-subtle text-brand-yellow px-2.5 py-1 rounded-full border border-border-default flex items-center gap-1.5 shadow">
-                        <Zap className="w-3 h-3" />
-                         +{questions[currentIdx].xp_value} XP
-                      </span>
-                      <span className="text-xs font-bold bg-bg-subtle text-brand-light px-2.5 py-1 rounded-full border border-border-default flex items-center gap-1.5 shadow">
-                        Total {totalXP} XP
-                      </span>
-                    </span>
-                  </div>
+              </motion.div>
+            )}
 
-                  {/* Progress bar */}
-                  <div className="w-full bg-bg-elevated h-2 rounded-full overflow-hidden border border-border-default">
-                    <div 
-                      className="bg-brand-yellow h-full rounded-full transition-all duration-300" 
-                      style={{ width: `${((currentIdx + 1) / questions.length) * 100}%` }}
-                    />
-                  </div>
-
-                  {/* Question Prompt Card */}
-                  <div className="bg-bg-subtle border border-border-default rounded-3xl p-5 shadow-xl relative overflow-hidden" id="card_question_prompt">
-                    {/* Timer indicator */}
-                    {questions[currentIdx].time_limit_seconds ? (
-                      <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 bg-bg-elevated rounded-full border border-border-default text-xs font-bold font-mono">
-                        <Clock className={`w-3.5 h-3.5 ${timeLeft <= 3 ? 'text-red-400 animate-pulse' : 'text-brand-yellow'}`} />
-                        <span className={timeLeft <= 3 ? 'text-red-400' : 'text-brand-light'}>
-                          {timeLeft}s
-                        </span>
-                      </div>
-                    ) : null}
-
-                    <div className="pt-4 pb-2">
-                      <h3 className="text-md sm:text-lg font-display font-bold text-brand-light leading-relaxed">
-                        {questions[currentIdx].question}
-                      </h3>
-                    </div>
-                  </div>
-
-                  {/* Options List */}
-                  <div className="space-y-3" id="block_answers_options">
-                    {(['a', 'b', 'c', 'd'] as const).map((opt) => {
-                      const optionText = questions[currentIdx][`option_${opt}` as keyof Question];
-                      if (!optionText) return null;
-
-                      // Styles determination
-                      const isSelected = selectedOpt === opt;
-                      const isCorrectAnswer = opt === questions[currentIdx].correct_option;
-                      let btnStyle = 'border-2 border-border-default hover:border-brand-yellow bg-bg-subtle text-text-body active:scale-[0.99]';
-                      let iconEl = null;
-
-                      if (feedback) {
-                        if (isCorrectAnswer) {
-                          btnStyle = 'border-2 border-emerald-500 bg-emerald-50 text-emerald-800 font-bold';
-                          iconEl = <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />;
-                        } else if (isSelected) {
-                          btnStyle = 'border-2 border-red-500 bg-red-50 text-red-700 font-bold';
-                          iconEl = <XCircle className="w-4 h-4 text-red-600 shrink-0" />;
-                        } else {
-                          btnStyle = 'border border-border-default bg-bg-elevated text-text-secondary opacity-40';
-                        }
-                      } else if (isSelected) {
-                        btnStyle = 'border-2 border-brand-yellow bg-brand-yellow/10 text-brand-light font-bold';
-                      }
-
-                      return (
-                        <button
-                          key={opt}
-                          onClick={() => handleAnswerSubmit(opt)}
-                          disabled={feedback !== null || submittingAnswer}
-                          className={`w-full p-4 rounded-2xl flex items-center gap-3 text-left text-sm font-semibold transition-all cursor-pointer ${btnStyle}`}
-                          id={`btn_option_${opt}`}
-                        >
-                          {/* Option badge */}
-                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-display font-bold text-xs uppercase shrink-0 transition-colors ${
-                            feedback 
-                              ? isCorrectAnswer 
-                                ? 'bg-emerald-500 text-[#111211]' 
-                                : isSelected 
-                                  ? 'bg-red-500 text-bg-subtle' 
-                                  : 'bg-bg-elevated text-text-secondary'
-                              : isSelected 
-                                ? 'bg-brand-yellow text-[#111211]' 
-                                : 'bg-bg-elevated text-text-secondary'
-                          }`}>
-                            {opt}
-                          </div>
-
-                          <span className="flex-1 text-sm leading-tight pr-2">
-                            {optionText}
-                          </span>
-
-                          {iconEl}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Feedback Banner Overlay */}
-                  <AnimatePresence>
-                    {feedback && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 10 }}
-                        className={`p-4 rounded-2xl border text-center font-semibold text-sm shadow-xl flex items-center justify-center gap-2 ${
-                          feedback.isCorrect
-                            ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                            : 'bg-red-50 border-red-300 text-red-800'
-                        }`}
-                        id="feedback_box"
-                      >
-                        {feedback.isCorrect ? (
-                          <>
-                            <Sparkles className="w-4 h-4 text-emerald-600 animate-spin" />
-                            <span>¡Correcto! Ganaste <span className="text-emerald-700 font-extrabold font-mono">+{feedback.xpEarned} XP</span></span>
-                          </>
-                        ) : (
-                          <>
-                            <XCircle className="w-4 h-4 text-red-600" />
-                            <span>Incorrecto. ¡Sigue intentando! <span className="font-mono text-red-700">(0 XP)</span></span>
-                          </>
-                        )}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </>
-              )}
-            </motion.div>
-          )}
-
-          {/* PANTALLA 3: RESULTADOS PERSONALES CON TABLA DE RANKING COMPLETA */}
-          {screen === 'results' && (
-            <motion.div
-              key="results-screen"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-bg-subtle border border-border-default rounded-3xl p-6 shadow-2xl flex flex-col items-stretch text-left relative overflow-hidden"
-              id="results-summary-card"
-            >
-              {/* Gold light burst */}
-              <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-48 h-48 bg-brand-yellow/10 rounded-full blur-3xl" />
-
-              <div className="flex items-center gap-3 mb-4 relative z-10 border-b border-border-default/60 pb-3">
-                <div className="w-10 h-10 rounded-xl bg-brand-yellow/10 border border-brand-yellow/25 flex items-center justify-center text-brand-yellow shrink-0">
-                  <Trophy className="w-5 h-5 shrink-0" />
-                </div>
-                <div>
-                  <h2 className="text-md font-display font-extrabold tracking-tight text-brand-light">
-                    ¡Trivia Completada!
-                  </h2>
-                  <p className="text-[11px] text-text-secondary font-medium">
-                    {player ? `Gran partida, ${player.name}.` : 'Revisa tu lugar en el podio.'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Dynamic Scorecard summary Row */}
-              <div className="grid grid-cols-3 gap-2 mb-4 relative z-10">
-                <div className="bg-bg-elevated border border-border-default rounded-xl p-2.5 flex flex-col items-center">
-                  <span className="text-[9px] font-bold text-text-secondary uppercase tracking-wider mb-0.5">
-                    XP Ganados
-                  </span>
-                  <span className="text-sm font-mono font-black text-brand-yellow">
-                    {totalXP.toLocaleString()}
-                  </span>
-                </div>
-                
-                <div className="bg-bg-elevated border border-border-default rounded-xl p-2.5 flex flex-col items-center">
-                  <span className="text-[9px] font-bold text-text-secondary uppercase tracking-wider mb-0.5">
-                    Aciertos
-                  </span>
-                  <span className="text-sm font-mono font-black text-[#5AE881]">
-                    {totalCorrect} <span className="text-[10px] text-text-secondary font-semibold font-sans">/ {questions.length}</span>
-                  </span>
-                </div>
-
-                <div className="bg-bg-elevated border border-border-default rounded-xl p-2.5 flex flex-col items-center">
-                  <span className="text-[9px] font-bold text-text-secondary uppercase tracking-wider mb-0.5">
-                    Posición
-                  </span>
-                  <span className="text-sm font-mono font-black text-brand-yellow">
-                    {playerRank !== null ? `#${playerRank}` : '#--'}
-                  </span>
-                </div>
-              </div>
-
-              {/* MOTIVATIONAL BANNER */}
-              {playerRank !== null && (
-                <div className="bg-bg-elevated/40 border border-border-default rounded-xl px-3 py-2 text-[11px] text-text-body leading-relaxed mb-4 text-center font-semibold">
-                  {getMotivationalMessage(playerRank)}
-                </div>
-              )}
-
-              {/* Leaderboard associated with the complete ranking */}
-              <div className="flex-1 flex flex-col min-h-[220px] max-h-[300px] overflow-hidden" id="ranking-container">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-xs font-display font-extrabold text-brand-light/90 uppercase tracking-wider flex items-center gap-1.5">
-                    <Award className="w-4 h-4 text-brand-yellow" />
-                    <span>Ranking General</span>
-                  </h3>
-                  {loadingRank && (
-                    <span className="flex items-center gap-1 text-[9px] text-brand-yellow font-mono font-bold animate-pulse">
-                      <RefreshCw className="w-3 h-3 animate-spin" />
-                      Actualizando...
-                    </span>
-                  )}
-                </div>
-
-                <div className="overflow-y-auto space-y-2 flex-1 pr-1" id="ranking-rows-scroll">
-                  {leaderboardRows.length === 0 ? (
-                    <div className="text-center py-10 text-xs text-text-secondary bg-bg-elevated/40 border border-dashed border-border-default rounded-2xl">
-                      Cargando jugadores registrados...
-                    </div>
-                  ) : (
-                    leaderboardRows.map((row) => {
-                      const isCurrentPlayer = player && row.player_id === player.id;
-                      return (
-                        <div
-                          key={row.player_id || row.id}
-                          className={`flex items-center justify-between p-3 rounded-xl text-xs transition-all border ${
-                            isCurrentPlayer
-                              ? 'bg-brand-yellow/10 border-brand-yellow/70 text-brand-yellow font-bold ring-1 ring-brand-yellow/20'
-                              : 'bg-bg-elevated border-border-default/60 hover:border-text-secondary text-brand-light'
-                          }`}
-                          id={`ranking_row_${row.player_id}`}
-                        >
-                          <div className="flex items-center gap-2 truncate">
-                            <span className={`w-5.5 h-5.5 rounded-lg text-[9px] font-mono font-bold flex items-center justify-center shrink-0 ${
-                              row.rank === 1
-                                ? 'bg-brand-yellow text-[#111211] font-black'
-                                : row.rank === 2
-                                  ? 'bg-neutral-300 text-bg-default font-black'
-                                  : row.rank === 3
-                                    ? 'bg-amber-600 text-brand-light font-black'
-                                    : 'bg-bg-subtle border border-border-default/80 text-text-secondary'
-                            }`}>
-                              #{row.rank}
-                            </span>
-                            <span className="truncate font-semibold text-xs text-brand-light/95">
-                              {row.name} {isCurrentPlayer && <span className="text-[10px] text-brand-yellow/80 font-mono">(Tú)</span>}
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center gap-2 font-mono text-[11px] shrink-0">
-                            <span className="text-emerald-500 font-extrabold shrink-0" title="Respuestas correctas">
-                              {row.correct_answers || 0} ✓
-                            </span>
-                            <span className="text-text-secondary opacity-30">•</span>
-                            <span className="font-extrabold text-[#F7DA16] shrink-0 text-xs text-nowrap">
-                              {(row.total_xp || 0).toLocaleString()} XP
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-
-              {/* Actions footer wrapper */}
-              <div className="grid grid-cols-1 gap-2 mt-5 pt-4 border-t border-border-default">
-                <button
-                  type="button"
-                  onClick={() => navigate(`/leaderboard/${playLeaderboardId}`)}
-                  className="py-3 bg-brand-yellow text-[#111211] font-bold rounded-xl text-xs cursor-pointer hover:brightness-115 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5"
-                  id="btn_view_leaderboard"
-                >
-                  <Trophy className="w-3.5 h-3.5" />
-                  Ver Leaderboard
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-        </AnimatePresence>
+          </AnimatePresence>
+        </div>
       </main>
-
-
 
     </div>
   );
