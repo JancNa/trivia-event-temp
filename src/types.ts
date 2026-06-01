@@ -62,4 +62,7 @@ export interface LeaderboardInfo {
   prize_top_n?: number;
   logo_url?: string;
   background_image_url?: string;
+  theme_primary?: string;
+  theme_secondary?: string;
+  theme_card_bg?: string;
 }

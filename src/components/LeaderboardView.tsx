@@ -350,6 +350,10 @@ export default function LeaderboardView() {
     );
   }
 
+  const primaryColor = activeLeaderboard?.theme_primary || "#fed600";
+  const secondaryColor = activeLeaderboard?.theme_secondary || "#111211";
+  const cardBgStyle = activeLeaderboard?.theme_card_bg || "light";
+
   return (
     <div
       className="min-h-screen text-slate-800 p-4 md:p-8 flex flex-col justify-between select-none relative"
@@ -362,6 +366,123 @@ export default function LeaderboardView() {
         backgroundAttachment: "fixed",
       }}
     >
+      <style>{`
+        :root {
+          --brand-primary: ${primaryColor};
+          --brand-secondary: ${secondaryColor};
+        }
+        
+        /* Specific element dynamic customizations */
+        .text-brand-yellow {
+          color: ${primaryColor} !important;
+        }
+        .bg-brand-yellow {
+          background-color: ${primaryColor} !important;
+        }
+        .border-brand-yellow {
+          border-color: ${primaryColor} !important;
+        }
+        .text-\[\#fed600\] {
+          color: ${primaryColor} !important;
+        }
+        .bg-\[\#fed600\] {
+          background-color: ${primaryColor} !important;
+        }
+        .border-\[\#fed600\] {
+          border-color: ${primaryColor} !important;
+        }
+        .bg-\[\#111211\] {
+          background-color: ${secondaryColor} !important;
+        }
+        .text-\[\#111211\] {
+          color: ${secondaryColor} !important;
+        }
+        .text-\[\#e5b300\] {
+          color: ${primaryColor} !important;
+          filter: brightness(1.2);
+        }
+        .bg-\[\#fed600\]\/10 {
+          background-color: ${primaryColor}1a !important;
+        }
+        .border-\[\#fed600\]\/30 {
+          border-color: ${primaryColor}4d !important;
+        }
+        
+        /* Override primary board bg container */
+        #leaderboard_primary_board {
+          background-color: ${cardBgStyle === 'dark' ? '#18181b' : cardBgStyle === 'glass' ? 'rgba(15, 15, 17, 0.65)' : 'rgba(255, 255, 255, 0.98)'} !important;
+          color: ${cardBgStyle === 'light' ? '#334155' : '#f8fafc'} !important;
+          border-color: ${cardBgStyle === 'glass' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.2)'} !important;
+          backdrop-filter: ${cardBgStyle === 'glass' ? 'blur(28px)' : 'none'} !important;
+        }
+        
+        /* Stats divisions block bg */
+        #leaderboard_primary_board .bg-\[\#fafafa\] {
+          background-[#fee134]
+          background-color: ${cardBgStyle === 'dark' ? '#1f1f23' : cardBgStyle === 'glass' ? 'rgba(255, 255, 255, 0.03)' : '#fafafa'} !important;
+          border-color: ${cardBgStyle === 'dark' ? '#27272a' : cardBgStyle === 'glass' ? 'rgba(255, 255, 255, 0.05)' : '#f1f5f9'} !important;
+        }
+        
+        #leaderboard_primary_board .divide-slate-100 > * + * {
+          border-color: ${cardBgStyle === 'dark' ? '#27272a' : cardBgStyle === 'glass' ? 'rgba(255, 255, 255, 0.05)' : '#e2e8f0'} !important;
+        }
+        
+        /* Accordion items */
+        .overflow-hidden.bg-\[\#fafafb\]\/85 {
+          background-color: ${cardBgStyle === 'dark' ? '#1c1c1f' : cardBgStyle === 'glass' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(250, 250, 251, 0.85)'} !important;
+        }
+        
+        /* Table rows and borders style */
+        #leaderboard-full-ranking {
+          background-color: ${cardBgStyle === 'dark' ? '#1f1f23' : cardBgStyle === 'glass' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(252, 251, 251, 0.5)'} !important;
+          border-color: ${cardBgStyle === 'dark' ? '#27272a' : cardBgStyle === 'glass' ? 'rgba(255, 255, 255, 0.05)' : '#f1f5f9'} !important;
+        }
+        
+        #leaderboard-full-ranking .divide-slate-100 > * + * {
+          border-color: ${cardBgStyle === 'dark' ? '#27272a' : cardBgStyle === 'glass' ? 'rgba(255, 255, 255, 0.05)' : '#f1f5f9'} !important;
+        }
+        
+        #leaderboard-full-ranking .bg-white {
+          background-color: ${cardBgStyle === 'dark' ? '#18181b' : cardBgStyle === 'glass' ? 'transparent' : '#ffffff'} !important;
+          color: ${cardBgStyle === 'light' ? '#334155' : '#f8fafc'} !important;
+        }
+        
+        #leaderboard-full-ranking .bg-white:hover {
+          background-color: ${cardBgStyle === 'dark' ? '#27272a' : cardBgStyle === 'glass' ? 'rgba(255, 255, 255, 0.06)' : '#f8fafc'} !important;
+        }
+        
+        #leaderboard-full-ranking .hover\:border-\[\#fed600\]:hover {
+          border-left-color: ${primaryColor} !important;
+        }
+        
+        /* Accent overrides for dark theme */
+        ${cardBgStyle !== 'light' ? `
+          #leaderboard_primary_board h3,
+          #leaderboard_primary_board h4,
+          #leaderboard_primary_board span,
+          #leaderboard_primary_board p,
+          #leaderboard_primary_board td,
+          #leaderboard_primary_board th {
+            color: #e2e8f0 !important;
+          }
+          
+          #leaderboard_primary_board .text-[#111211] {
+            color: #ffffff !important;
+          }
+          
+          #leaderboard_primary_board .text-slate-800,
+          #leaderboard_primary_board .text-slate-700,
+          #leaderboard_primary_board .text-slate-600 {
+            color: #cbd5e1 !important;
+          }
+          
+          #leaderboard_primary_board .text-slate-500,
+          #leaderboard_primary_board .text-slate-400 {
+            color: #94a3b8 !important;
+          }
+        ` : ''}
+      `}</style>
+
       {/* Floating Quiet Control Utilities Bar at the very top */}
       <div className="absolute top-4 left-4 right-4 z-50 flex items-center justify-between pointer-events-none text-transparent">
         <div className="flex items-center gap-2 pointer-events-auto">
@@ -485,16 +606,51 @@ export default function LeaderboardView() {
                   <div className="p-6 border-t border-slate-100 space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-medium">
                       {/* 1st Place */}
-                      <div className="p-3.5 bg-yellow-50/60 border border-yellow-100 rounded-2xl flex gap-3.5 items-center">
-                        <div className="text-2xl shrink-0">👑</div>
-                        <div>
-                          <div className="font-bold text-[#111211]">
-                            1er Lugar: {activeLeaderboard?.prize_title || "Premios del Evento"}
+                      <div className="p-3.5 bg-yellow-50/60 border border-yellow-100 rounded-2xl flex flex-col gap-3 items-start justify-between min-h-[110px]">
+                        <div className="flex gap-3.5 items-center">
+                          <div className="text-2xl shrink-0">👑</div>
+                          <div className="flex-1">
+                            <div className="font-bold text-[#111211]">
+                              1er Lugar: {activeLeaderboard?.prize_title || "Premios del Evento"}
+                            </div>
+                            <p className="text-[10px] text-slate-500 mt-0.5">
+                              {activeLeaderboard?.prize_description || "Premios especiales para el ganador."}
+                            </p>
                           </div>
-                          <p className="text-[10px] text-slate-500 mt-0.5">
-                            {activeLeaderboard?.prize_description || "Premios especiales para el ganador."}
-                          </p>
                         </div>
+
+                        {/* Dynamic Prize Sponsor & Prize Image */}
+                        {(activeLeaderboard?.prize_image_url || activeLeaderboard?.prize_sponsor) && (
+                          <div className="w-full flex items-center justify-between pt-2 border-t border-yellow-200/30 gap-2 mt-1">
+                            {activeLeaderboard.prize_image_url ? (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[9px] text-slate-400 font-bold uppercase">Premio:</span>
+                                <img 
+                                  src={activeLeaderboard.prize_image_url} 
+                                  alt="Premio" 
+                                  className="h-8 w-8 object-cover rounded-md border border-yellow-200" 
+                                  referrerPolicy="no-referrer"
+                                />
+                              </div>
+                            ) : <div />}
+
+                            {activeLeaderboard.prize_sponsor && (
+                              <div className="flex items-center gap-1.5 font-sans">
+                                <span className="text-[9px] text-slate-400 font-bold uppercase">Sponsor:</span>
+                                {activeLeaderboard.prize_sponsor.startsWith("http") ? (
+                                  <img 
+                                    src={activeLeaderboard.prize_sponsor} 
+                                    alt="Sponsor" 
+                                    className="h-6 object-contain max-w-[80px]" 
+                                    referrerPolicy="no-referrer"
+                                  />
+                                ) : (
+                                  <span className="text-[10px] font-black text-slate-700">{activeLeaderboard.prize_sponsor}</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* 2nd Place */}

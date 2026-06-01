@@ -30,6 +30,7 @@ import {
   insertMockCompetitor,
   fetchLeaderboardsSupabase,
   createLeaderboardSupabase,
+  updateLeaderboardDetailsSupabase,
 } from "../dataService";
 import {
   Trophy,
@@ -54,13 +55,17 @@ import {
   Menu,
   Sparkles,
   Database,
+  Palette,
+  Save,
+  Image,
+  Gift,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 export default function AdminView() {
   // Navigation
   const [activeTab, setActiveTab] = useState<
-    "leaderboard" | "stats" | "players" | "questions"
+    "leaderboard" | "stats" | "players" | "questions" | "appearance"
   >("leaderboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -81,6 +86,19 @@ export default function AdminView() {
   const [newBoardBackgroundUrl, setNewBoardBackgroundUrl] = useState("");
   const [creatingBoard, setCreatingBoard] = useState(false);
 
+  // Appearance Edit States for current dynamic/selected leaderboard
+  const [editedName, setEditedName] = useState("");
+  const [editedPrizeTitle, setEditedPrizeTitle] = useState("");
+  const [editedPrizeDesc, setEditedPrizeDesc] = useState("");
+  const [editedPrizeImg, setEditedPrizeImg] = useState("");
+  const [editedPrizeSponsor, setEditedPrizeSponsor] = useState("");
+  const [editedLogoUrl, setEditedLogoUrl] = useState("");
+  const [editedBgUrl, setEditedBgUrl] = useState("");
+  const [editedThemePrimary, setEditedThemePrimary] = useState("#fed600");
+  const [editedThemeSecondary, setEditedThemeSecondary] = useState("#111211");
+  const [editedThemeCardBg, setEditedThemeCardBg] = useState("light");
+  const [savingSettings, setSavingSettings] = useState(false);
+
   // DB Data States
   const [questions, setQuestions] = useState<Question[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
@@ -90,6 +108,26 @@ export default function AdminView() {
   const [playerAnswers, setPlayerAnswers] = useState<Record<string, Answer[]>>(
     {},
   );
+
+  const lastPopulatedIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (activeLeaderboard) {
+      if (lastPopulatedIdRef.current !== selectedLeaderboardId) {
+        lastPopulatedIdRef.current = selectedLeaderboardId;
+        setEditedName(activeLeaderboard.name || "");
+        setEditedPrizeTitle(activeLeaderboard.prize_title || "");
+        setEditedPrizeDesc(activeLeaderboard.prize_description || "");
+        setEditedPrizeImg(activeLeaderboard.prize_image_url || "");
+        setEditedPrizeSponsor(activeLeaderboard.prize_sponsor || "");
+        setEditedLogoUrl(activeLeaderboard.logo_url || "");
+        setEditedBgUrl(activeLeaderboard.background_image_url || "");
+        setEditedThemePrimary(activeLeaderboard.theme_primary || "#fed600");
+        setEditedThemeSecondary(activeLeaderboard.theme_secondary || "#111211");
+        setEditedThemeCardBg(activeLeaderboard.theme_card_bg || "light");
+      }
+    }
+  }, [activeLeaderboard, selectedLeaderboardId]);
 
   // Loading & Refresh states
   const [loading, setLoading] = useState(true);
@@ -503,6 +541,40 @@ export default function AdminView() {
     }
   };
 
+  const handleSaveAppearance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeLeaderboard) return;
+    setSavingSettings(true);
+    try {
+      const ok = await updateLeaderboardDetailsSupabase(selectedLeaderboardId, {
+        name: editedName.trim(),
+        prize_title: editedPrizeTitle.trim(),
+        prize_description: editedPrizeDesc.trim(),
+        prize_image_url: editedPrizeImg.trim(),
+        prize_sponsor: editedPrizeSponsor.trim(),
+        logo_url: editedLogoUrl.trim(),
+        background_image_url: editedBgUrl.trim(),
+        theme_primary: editedThemePrimary.trim(),
+        theme_secondary: editedThemeSecondary.trim(),
+        theme_card_bg: editedThemeCardBg
+      });
+
+      if (ok) {
+        lastPopulatedIdRef.current = null;
+        showToast("¡Apariencia y configuración de marca guardadas!", "success");
+        // Reload settings so everything updates immediately
+        loadAllAdminData(false, selectedLeaderboardId);
+      } else {
+        showToast("Error al guardar la configuración.", "error");
+      }
+    } catch (err: any) {
+      console.error(err);
+      showToast("Ocurrió un error al guardar la configuración.", "error");
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
   const formatTimestamp = (isoString?: string) => {
     if (!isoString) return "--:--";
     const d = new Date(isoString);
@@ -710,6 +782,18 @@ export default function AdminView() {
               <HelpCircle className="w-4 h-4 shrink-0" />
               <span>4. ❓ Preguntas</span>
             </button>
+
+            <button
+              onClick={() => selectTab("appearance")}
+              className={`w-full py-3 px-4 rounded-2xl flex items-center gap-3 text-xs font-bold transition-all hover:bg-bg-elevated group cursor-pointer ${
+                activeTab === "appearance"
+                  ? "bg-brand-yellow text-[#111211] font-extrabold"
+                  : "text-text-secondary hover:text-brand-light"
+              }`}
+            >
+              <Palette className="w-4 h-4 shrink-0" />
+              <span>5. 🎨 Apariencia</span>
+            </button>
           </nav>
         </div>
 
@@ -868,10 +952,10 @@ export default function AdminView() {
                       por los participantes.
                     </p>
                   </div>
-                  <div className="flex flex-col gap-2 shrink-0">
+                  <div className="flex flex-col gap-2 w-full md:max-w-xl shrink-0">
                     {/* PLAY LINK CARD */}
-                    <div className="bg-neutral-900/40 border border-neutral-700/50 p-3 rounded-2xl flex items-center gap-3">
-                      <div className="flex-1 min-w-[200px]">
+                    <div className="bg-neutral-900/40 border border-neutral-700/50 p-3.5 rounded-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0 break-all">
                         <span className="block text-[10px] text-text-secondary font-mono tracking-wider mb-1">
                           ENLACE PARA JUGADORES:
                         </span>
@@ -879,13 +963,13 @@ export default function AdminView() {
                           href={`https://jancna.github.io/trivia-event-temp/#/play/${selectedLeaderboardId}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-xs text-brand-yellow font-bold hover:underline break-all"
+                          className="text-xs text-brand-yellow font-bold hover:underline break-all block"
                           title="Ir a la trivia"
                         >
                           {`https://jancna.github.io/trivia-event-temp/#/play/${selectedLeaderboardId}`}
                         </a>
                       </div>
-                      <div className="flex flex-col gap-1.5 shrink-0">
+                      <div className="flex flex-row sm:flex-col gap-1.5 shrink-0">
                         <button
                           onClick={() => {
                             navigator.clipboard.writeText(
@@ -893,13 +977,13 @@ export default function AdminView() {
                             );
                             showToast("Enlace de jugador copiado");
                           }}
-                          className="w-full px-3 py-1.5 bg-bg-elevated hover:bg-neutral-800 text-[10px] font-bold uppercase tracking-wider text-text-secondary border border-border-default hover:border-brand-yellow rounded-xl transition-all cursor-pointer shadow flex items-center justify-center shrink-0"
+                          className="flex-1 sm:w-full px-3 py-1.5 bg-bg-elevated hover:bg-neutral-800 text-[10px] font-bold uppercase tracking-wider text-text-secondary border border-border-default hover:border-brand-yellow rounded-xl transition-all cursor-pointer shadow flex items-center justify-center shrink-0"
                         >
                           Copiar URL
                         </button>
                         <button
                           onClick={() => setShowQRModal(true)}
-                          className="w-full px-3 py-1.5 bg-brand-yellow/10 hover:bg-brand-yellow/20 text-[#fed600] text-[10px] font-bold uppercase tracking-wider border border-brand-yellow/30 hover:border-brand-yellow rounded-xl transition-all cursor-pointer shadow flex items-center justify-center shrink-0"
+                          className="flex-1 sm:w-full px-3 py-1.5 bg-brand-yellow/10 hover:bg-brand-yellow/20 text-[#fed600] text-[10px] font-bold uppercase tracking-wider border border-brand-yellow/30 hover:border-brand-yellow rounded-xl transition-all cursor-pointer shadow flex items-center justify-center shrink-0"
                         >
                           Ver QR
                         </button>
@@ -907,8 +991,8 @@ export default function AdminView() {
                     </div>
 
                     {/* LEADERBOARD LINK CARD */}
-                    <div className="bg-neutral-900/40 border border-neutral-700/50 p-3 rounded-2xl flex items-center gap-3">
-                      <div className="flex-1 min-w-[200px]">
+                    <div className="bg-neutral-900/40 border border-neutral-700/50 p-3.5 rounded-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0 break-all">
                         <span className="block text-[10px] text-text-secondary font-mono tracking-wider mb-1">
                           ENLACE LEADERBOARD:
                         </span>
@@ -916,7 +1000,7 @@ export default function AdminView() {
                           href={`https://jancna.github.io/trivia-event-temp/#/leaderboard/${selectedLeaderboardId}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-xs text-brand-yellow font-bold hover:underline break-all"
+                          className="text-xs text-brand-yellow font-bold hover:underline break-all block"
                           title="Ir al leaderboard público"
                         >
                           {`https://jancna.github.io/trivia-event-temp/#/leaderboard/${selectedLeaderboardId}`}
@@ -929,7 +1013,7 @@ export default function AdminView() {
                           );
                           showToast("Enlace de leaderboard copiado");
                         }}
-                        className="px-3 py-1.5 bg-bg-elevated hover:bg-neutral-800 text-xs text-text-secondary border border-border-default hover:border-brand-yellow rounded-xl transition-all cursor-pointer shadow flex items-center justify-center shrink-0"
+                        className="px-3 py-2 bg-bg-elevated hover:bg-neutral-800 text-xs text-text-secondary border border-border-default hover:border-brand-yellow rounded-xl transition-all cursor-pointer shadow flex items-center justify-center shrink-0"
                       >
                         Copiar
                       </button>
@@ -1580,6 +1664,246 @@ export default function AdminView() {
                   )}
                 </div>
               </div>
+            </motion.section>
+          )}
+
+          {activeTab === "appearance" && (
+            <motion.section
+              key="tab-appearance"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="space-y-6"
+            >
+              <form onSubmit={handleSaveAppearance} className="space-y-6">
+                <div className="bg-bg-subtle border border-border-default rounded-3xl p-6 shadow-xl space-y-6">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-default/60 pb-4">
+                    <div className="space-y-1">
+                      <h2 className="text-md font-display font-bold text-brand-light flex items-center gap-2">
+                        <Palette className="w-5 h-5 text-brand-yellow" />
+                        <span>Personalizar Diseño y Marca del Leaderboard</span>
+                      </h2>
+                      <p className="text-xs text-text-secondary">
+                        Ajusta logos, fondo de pantalla principal y paleta de colores para tu marca en tiempo real.
+                      </p>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={savingSettings}
+                      className="px-5 py-2.5 bg-brand-yellow hover:bg-[#ffe53a] text-[#111211] rounded-xl font-bold text-xs flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all shadow active:scale-95 shrink-0"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>{savingSettings ? "Guardando..." : "Guardar Cambios"}</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-5">
+                      <h3 className="text-xs font-bold text-brand-yellow uppercase tracking-wider border-b border-border-default/30 pb-2">
+                        Información y Logos
+                      </h3>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider block">
+                          Nombre del Evento (Trivia)
+                        </label>
+                        <input
+                          type="text"
+                          value={editedName}
+                          onChange={(e) => setEditedName(e.target.value)}
+                          placeholder="ej: Trivia Anual de Tecnología"
+                          className="w-full bg-bg-elevated border border-border-default hover:border-brand-yellow/40 text-brand-light placeholder:text-text-secondary/50 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-yellow transition-all"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider block">
+                          URL Logo Principal del Evento
+                        </label>
+                        <input
+                          type="text"
+                          value={editedLogoUrl}
+                          onChange={(e) => setEditedLogoUrl(e.target.value)}
+                          placeholder="ej: https://empresa.com/logo.png"
+                          className="w-full bg-bg-elevated border border-border-default hover:border-brand-yellow/40 text-brand-light placeholder:text-text-secondary/50 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-yellow transition-all"
+                        />
+                        {editedLogoUrl && (
+                          <div className="mt-2 p-2 bg-bg-elevated rounded-xl border border-border-default inline-block">
+                            <span className="text-[9px] text-text-secondary block mb-1">Vista Previa Logo:</span>
+                            <img src={editedLogoUrl} alt="Logo Preview" referrerPolicy="no-referrer" className="h-10 object-contain max-w-[200px]" onError={(e) => { (e.target as any).style.display = 'none'; }} />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider block">
+                          URL Imagen de Fondo de Pantalla
+                        </label>
+                        <input
+                          type="text"
+                          value={editedBgUrl}
+                          onChange={(e) => setEditedBgUrl(e.target.value)}
+                          placeholder="ej: https://base.com/background.jpg"
+                          className="w-full bg-bg-elevated border border-border-default hover:border-brand-yellow/40 text-brand-light placeholder:text-text-secondary/50 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-yellow transition-all"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider block">
+                          URL del Sponsor / Auspiciador
+                        </label>
+                        <input
+                          type="text"
+                          value={editedPrizeSponsor}
+                          onChange={(e) => setEditedPrizeSponsor(e.target.value)}
+                          placeholder="ej: https://logo.com/sponsor.png"
+                          className="w-full bg-bg-elevated border border-border-default hover:border-brand-yellow/40 text-brand-light placeholder:text-text-secondary/50 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-yellow transition-all"
+                        />
+                        {editedPrizeSponsor && editedPrizeSponsor.startsWith("http") && (
+                          <div className="mt-2 p-2 bg-bg-elevated rounded-xl border border-border-default inline-block">
+                            <span className="text-[9px] text-text-secondary block mb-1">Vista Previa Sponsor:</span>
+                            <img src={editedPrizeSponsor} alt="Sponsor Logo Preview" referrerPolicy="no-referrer" className="h-10 object-contain max-w-[200px]" onError={(e) => { (e.target as any).style.display = 'none'; }} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-5">
+                      <h3 className="text-xs font-bold text-brand-yellow uppercase tracking-wider border-b border-border-default/30 pb-2">
+                        Paleta de Colores del Evento
+                      </h3>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider block">
+                            Color Primario (Acento / Corona)
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="color"
+                              value={editedThemePrimary.startsWith("#") ? editedThemePrimary : "#fed600"}
+                              onChange={(e) => setEditedThemePrimary(e.target.value)}
+                              className="w-10 h-10 bg-transparent border border-border-default rounded-xl p-3 cursor-pointer"
+                            />
+                            <input
+                              type="text"
+                              value={editedThemePrimary}
+                              onChange={(e) => setEditedThemePrimary(e.target.value)}
+                              className="flex-1 bg-bg-elevated border border-border-default text-brand-light rounded-xl px-3 py-2.5 text-xs font-mono focus:outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider block">
+                            Color Secundario (Fondo / Textos)
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="color"
+                              value={editedThemeSecondary.startsWith("#") ? editedThemeSecondary : "#111211"}
+                              onChange={(e) => setEditedThemeSecondary(e.target.value)}
+                              className="w-10 h-10 bg-transparent border border-border-default rounded-xl p-3 cursor-pointer"
+                            />
+                            <input
+                              type="text"
+                              value={editedThemeSecondary}
+                              onChange={(e) => setEditedThemeSecondary(e.target.value)}
+                              className="flex-1 bg-bg-elevated border border-border-default text-brand-light rounded-xl px-3 py-2.5 text-xs font-mono focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider block">
+                          Fondo de las Tarjetas de Jugadores
+                        </label>
+                        <div className="grid grid-cols-3 gap-2 bg-bg-elevated p-1.5 rounded-2xl border border-border-default">
+                          {[
+                            { value: "light", label: "Brillante" },
+                            { value: "dark", label: "Oscuro" },
+                            { value: "glass", label: "Cristal" },
+                          ].map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => setEditedThemeCardBg(opt.value)}
+                              className={`py-2 px-3 rounded-xl text-[11px] font-bold text-center transition-all cursor-pointer ${
+                                editedThemeCardBg === opt.value
+                                  ? "bg-brand-yellow text-[#111211]"
+                                  : "text-text-secondary hover:text-brand-light hover:bg-white/5"
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <h3 className="text-xs font-bold text-brand-yellow uppercase tracking-wider border-b border-border-default/30 pt-3 pb-2">
+                        Información del Premio Destacado
+                      </h3>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider block">
+                            Título del Premio (1er Lugar)
+                          </label>
+                          <input
+                            type="text"
+                            value={editedPrizeTitle}
+                            onChange={(e) => setEditedPrizeTitle(e.target.value)}
+                            placeholder="ej: iPhone 15 Pro"
+                            className="w-full bg-bg-elevated border border-border-default hover:border-brand-yellow/40 text-brand-light placeholder:text-text-secondary/50 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-yellow transition-all"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider block">
+                            URL Imagen de Premio
+                          </label>
+                          <input
+                            type="text"
+                            value={editedPrizeImg}
+                            onChange={(e) => setEditedPrizeImg(e.target.value)}
+                            placeholder="ej: https://base-premios.com/tv.png"
+                            className="w-full bg-bg-elevated border border-border-default hover:border-brand-yellow/40 text-brand-light placeholder:text-text-secondary/50 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider block">
+                          Descripción para el Premio
+                        </label>
+                        <input
+                          type="text"
+                          value={editedPrizeDesc}
+                          onChange={(e) => setEditedPrizeDesc(e.target.value)}
+                          placeholder="ej: Otorgado al jugador con mayor XP acumulada"
+                          className="w-full bg-bg-elevated border border-border-default hover:border-brand-yellow/40 text-brand-light placeholder:text-text-secondary/50 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-border-default/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <span className="text-[11px] text-text-secondary leading-relaxed max-w-sm">
+                      💡 Los cambios guardados se verán reflejados inmediatamente en las pantallas de todos los participantes y en el leaderboard público secundario.
+                    </span>
+                    <button
+                      type="submit"
+                      disabled={savingSettings}
+                      className="w-full md:w-auto px-6 py-3 bg-brand-yellow hover:bg-[#ffe53a] text-[#111211] rounded-2xl font-black text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all shadow-md active:scale-95 text-center shrink-0"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>{savingSettings ? "Guardando..." : "Guardar Cambios"}</span>
+                    </button>
+                  </div>
+                </div>
+              </form>
             </motion.section>
           )}
         </AnimatePresence>

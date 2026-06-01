@@ -600,11 +600,11 @@ export async function fetchActiveLeaderboardInfo(leaderboardId: string = '000000
   if (isDemoMode()) {
     const list = fetchLeaderboards();
     const board = list.find(b => b.id === leaderboardId || (leaderboardId === '00000000-0000-0000-0000-000000000001' && b.id === 'default'));
-    return {
+    return board ? { ...board, id: leaderboardId } : {
       id: leaderboardId,
-      name: board ? board.name : 'Trivia Event Principal',
-      status: (board ? board.status : 'active') as any,
-      created_at: board ? board.created_at : new Date().toISOString()
+      name: 'Trivia Event Principal',
+      status: 'active' as any,
+      created_at: new Date().toISOString()
     };
   }
   try {
@@ -615,21 +615,135 @@ export async function fetchActiveLeaderboardInfo(leaderboardId: string = '000000
       .single();
     if (error) {
       console.warn('Metadata view or table leaderboards failed, using fallback:', error);
-      return {
+      const fallbackResult = {
         id: leaderboardId,
         name: 'Trivia Event Principal (Fallback)',
         status: 'active' as any,
         created_at: new Date().toISOString()
       };
+      // Merge local theme fallback
+      try {
+        const storedThemesStr = localStorage.getItem('trivia_custom_themes');
+        if (storedThemesStr) {
+          const storedThemes = JSON.parse(storedThemesStr);
+          if (storedThemes[leaderboardId]) {
+            return { ...fallbackResult, ...storedThemes[leaderboardId] };
+          }
+        }
+      } catch (e) {}
+      return fallbackResult;
     }
+
+    // Merge theme colors from local storage override as a robust fallback
+    try {
+      const storedThemesStr = localStorage.getItem('trivia_custom_themes');
+      if (storedThemesStr && data) {
+        const storedThemes = JSON.parse(storedThemesStr);
+        if (storedThemes[leaderboardId]) {
+          return {
+            ...data,
+            ...storedThemes[leaderboardId]
+          };
+        }
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+
     return data;
   } catch (err) {
-    return {
+    const fallbackResult = {
       id: leaderboardId,
       name: 'Trivia Event Principal (Fallback)',
       status: 'active' as any,
       created_at: new Date().toISOString()
     };
+    try {
+      const storedThemesStr = localStorage.getItem('trivia_custom_themes');
+      if (storedThemesStr) {
+        const storedThemes = JSON.parse(storedThemesStr);
+        if (storedThemes[leaderboardId]) {
+          return { ...fallbackResult, ...storedThemes[leaderboardId] };
+        }
+      }
+    } catch (e) {}
+    return fallbackResult;
+  }
+}
+
+export async function updateLeaderboardDetailsSupabase(
+  leaderboardId: string,
+  updates: Partial<LeaderboardInfo>
+): Promise<boolean> {
+  const targetId = leaderboardId === 'default' ? '00000000-0000-0000-0000-000000000001' : leaderboardId;
+
+  if (isDemoMode()) {
+    const list = fetchLeaderboards();
+    const updated = list.map(b => {
+      const checkId = b.id === 'default' ? '00000000-0000-0000-0000-000000000001' : b.id;
+      if (checkId === targetId) {
+        return { ...b, ...updates };
+      }
+      return b;
+    });
+    saveLeaderboards(updated);
+    return true;
+  }
+
+  try {
+    const client = supabaseAdmin || supabase;
+    if (!client) throw new Error('No se pudo inicializar el cliente de Supabase.');
+
+    // Separate standard columns we know are in table schema from any potential custom columns
+    const standardFields: any = {
+      name: updates.name,
+      prize_title: updates.prize_title,
+      prize_description: updates.prize_description,
+      prize_image_url: updates.prize_image_url,
+      prize_sponsor: updates.prize_sponsor,
+      logo_url: updates.logo_url,
+      background_image_url: updates.background_image_url,
+    };
+
+    // If there are theme colors, also save to local storage as a robust fallback
+    if (updates.theme_primary || updates.theme_secondary || updates.theme_card_bg) {
+      const storedThemesStr = localStorage.getItem('trivia_custom_themes') || '{}';
+      const storedThemes = JSON.parse(storedThemesStr);
+      storedThemes[targetId] = {
+        ...(storedThemes[targetId] || {}),
+        theme_primary: updates.theme_primary,
+        theme_secondary: updates.theme_secondary,
+        theme_card_bg: updates.theme_card_bg
+      };
+      localStorage.setItem('trivia_custom_themes', JSON.stringify(storedThemes));
+    }
+
+    // Try to update with standard fields
+    const { error: standardError } = await client
+      .from('leaderboards')
+      .update(standardFields)
+      .eq('id', targetId);
+
+    if (standardError) throw standardError;
+
+    // Optional: Also try to update with theme columns just in case they exist on their physical schema
+    try {
+      const { error: fullError } = await client
+        .from('leaderboards')
+        .update({
+          theme_primary: updates.theme_primary,
+          theme_secondary: updates.theme_secondary,
+          theme_card_bg: updates.theme_card_bg
+        })
+        .eq('id', targetId);
+    } catch (e) {
+      // safe to ignore missing columns
+    }
+
+    return true;
+  } catch (err) {
+    console.error('Error updating leaderboard details:', err);
+    return false;
   }
 }
 
@@ -919,6 +1033,7 @@ function calculateSimulatedLeaderboard(leaderboardId: string = '00000000-0000-00
   const map: Record<string, {
     player_id: string;
     name: string;
+    player_name: string;
     total_xp: number;
     correct_answers: number;
     total_answers: number;
