@@ -636,14 +636,21 @@ export async function fetchActiveLeaderboardInfo(leaderboardId: string = '000000
       return fallbackResult;
     }
 
+    const mapped = data ? {
+      ...data,
+      theme_primary: data.primary_color || data.theme_primary,
+      theme_secondary: data.secondary_color || data.theme_secondary,
+      theme_card_bg: data.background_color || data.theme_card_bg || 'light',
+    } : null;
+
     // Merge theme colors from local storage override as a robust fallback
     try {
       const storedThemesStr = localStorage.getItem('trivia_custom_themes');
-      if (storedThemesStr && data) {
+      if (storedThemesStr && mapped) {
         const storedThemes = JSON.parse(storedThemesStr);
         if (storedThemes[targetId]) {
           return {
-            ...data,
+            ...mapped,
             ...storedThemes[targetId]
           };
         }
@@ -652,7 +659,7 @@ export async function fetchActiveLeaderboardInfo(leaderboardId: string = '000000
       console.warn(e);
     }
 
-    return data;
+    return mapped;
   } catch (err) {
     const fallbackResult = {
       id: targetId,
@@ -705,9 +712,9 @@ export async function updateLeaderboardDetailsSupabase(
       prize_sponsor: updates.prize_sponsor,
       logo_url: updates.logo_url,
       background_image_url: updates.background_image_url,
-      theme_primary: updates.theme_primary,
-      theme_secondary: updates.theme_secondary,
-      theme_card_bg: updates.theme_card_bg,
+      primary_color: updates.theme_primary,
+      secondary_color: updates.theme_secondary,
+      background_color: updates.theme_card_bg,
     };
 
     // If there are theme colors, also save to local storage as a robust fallback
@@ -855,7 +862,13 @@ export async function fetchLeaderboardsSupabase(): Promise<LeaderboardInfo[]> {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return mergeLocalThemes(data || []);
+    const mapped = (data || []).map((b: any) => ({
+      ...b,
+      theme_primary: b.primary_color || b.theme_primary,
+      theme_secondary: b.secondary_color || b.theme_secondary,
+      theme_card_bg: b.background_color || b.theme_card_bg || 'light',
+    }));
+    return mergeLocalThemes(mapped);
   } catch (err) {
     console.warn('Failed to fetch leaderboards list from Supabase, returning simulated ones:', err);
     const raw = [
