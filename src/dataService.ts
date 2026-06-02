@@ -596,18 +596,34 @@ export async function finalizePlayerResults(
   }
 }
 
+function applyTexacoOverride<T extends { name?: string; description?: string; theme_primary?: string; theme_secondary?: string; primary_color?: string; secondary_color?: string } | null | undefined>(board: T): T {
+  if (!board) return board;
+  const name = board.name || '';
+  const desc = board.description || '';
+  if (name.toLowerCase().includes('texaco') || desc.toLowerCase().includes('texaco')) {
+    return {
+      ...board,
+      primary_color: '#d03730',
+      secondary_color: '#111211',
+      theme_primary: '#d03730',
+      theme_secondary: '#111211',
+    };
+  }
+  return board;
+}
+
 export async function fetchActiveLeaderboardInfo(leaderboardId: string = '00000000-0000-0000-0000-000000000001'): Promise<LeaderboardInfo | null> {
   const targetId = leaderboardId === 'default' ? '00000000-0000-0000-0000-000000000001' : leaderboardId;
 
   if (isDemoMode()) {
     const list = fetchLeaderboards();
     const board = list.find(b => b.id === targetId || (targetId === '00000000-0000-0000-0000-000000000001' && b.id === 'default'));
-    return board ? { ...board, id: targetId } : {
+    return applyTexacoOverride(board ? { ...board, id: targetId } : {
       id: targetId,
       name: 'Trivia Event Principal',
       status: 'active' as any,
       created_at: new Date().toISOString()
-    };
+    });
   }
   try {
     const { data, error } = await supabase!
@@ -629,11 +645,11 @@ export async function fetchActiveLeaderboardInfo(leaderboardId: string = '000000
         if (storedThemesStr) {
           const storedThemes = JSON.parse(storedThemesStr);
           if (storedThemes[targetId]) {
-            return { ...fallbackResult, ...storedThemes[targetId] };
+            return applyTexacoOverride({ ...fallbackResult, ...storedThemes[targetId] });
           }
         }
       } catch (e) {}
-      return fallbackResult;
+      return applyTexacoOverride(fallbackResult);
     }
 
     const mapped = data ? {
@@ -649,17 +665,17 @@ export async function fetchActiveLeaderboardInfo(leaderboardId: string = '000000
       if (storedThemesStr && mapped) {
         const storedThemes = JSON.parse(storedThemesStr);
         if (storedThemes[targetId]) {
-          return {
+          return applyTexacoOverride({
             ...mapped,
             ...storedThemes[targetId]
-          };
+          });
         }
       }
     } catch (e) {
       console.warn(e);
     }
 
-    return mapped;
+    return applyTexacoOverride(mapped);
   } catch (err) {
     const fallbackResult = {
       id: targetId,
@@ -672,11 +688,11 @@ export async function fetchActiveLeaderboardInfo(leaderboardId: string = '000000
       if (storedThemesStr) {
         const storedThemes = JSON.parse(storedThemesStr);
         if (storedThemes[targetId]) {
-          return { ...fallbackResult, ...storedThemes[targetId] };
+          return applyTexacoOverride({ ...fallbackResult, ...storedThemes[targetId] });
         }
       }
     } catch (e) {}
-    return fallbackResult;
+    return applyTexacoOverride(fallbackResult);
   }
 }
 
@@ -686,12 +702,23 @@ export async function updateLeaderboardDetailsSupabase(
 ): Promise<boolean> {
   const targetId = leaderboardId === 'default' ? '00000000-0000-0000-0000-000000000001' : leaderboardId;
 
+  let finalUpdates: any = { ...updates };
+  // Check if name contains 'texaco'
+  const isTexaco = finalUpdates.name?.toLowerCase().includes('texaco') || 
+                   finalUpdates.prize_description?.toLowerCase().includes('texaco');
+  if (isTexaco) {
+    finalUpdates.theme_primary = '#d03730';
+    finalUpdates.theme_secondary = '#111211';
+    finalUpdates.primary_color = '#d03730';
+    finalUpdates.secondary_color = '#111211';
+  }
+
   if (isDemoMode()) {
     const list = fetchLeaderboards();
     const updated = list.map(b => {
       const checkId = b.id === 'default' ? '00000000-0000-0000-0000-000000000001' : b.id;
       if (checkId === targetId) {
-        return { ...b, ...updates };
+        return { ...b, ...finalUpdates };
       }
       return b;
     });
@@ -705,27 +732,27 @@ export async function updateLeaderboardDetailsSupabase(
 
     // Separate standard columns we know are in table schema from any potential custom columns
     const standardFields: any = {
-      name: updates.name,
-      prize_title: updates.prize_title,
-      prize_description: updates.prize_description,
-      prize_image_url: updates.prize_image_url,
-      prize_sponsor: updates.prize_sponsor,
-      logo_url: updates.logo_url,
-      background_image_url: updates.background_image_url,
-      primary_color: updates.theme_primary,
-      secondary_color: updates.theme_secondary,
-      background_color: updates.theme_card_bg,
+      name: finalUpdates.name,
+      prize_title: finalUpdates.prize_title,
+      prize_description: finalUpdates.prize_description,
+      prize_image_url: finalUpdates.prize_image_url,
+      prize_sponsor: finalUpdates.prize_sponsor,
+      logo_url: finalUpdates.logo_url,
+      background_image_url: finalUpdates.background_image_url,
+      primary_color: finalUpdates.theme_primary,
+      secondary_color: finalUpdates.theme_secondary,
+      background_color: finalUpdates.theme_card_bg,
     };
 
     // If there are theme colors, also save to local storage as a robust fallback
-    if (updates.theme_primary || updates.theme_secondary || updates.theme_card_bg) {
+    if (finalUpdates.theme_primary || finalUpdates.theme_secondary || finalUpdates.theme_card_bg) {
       const storedThemesStr = localStorage.getItem('trivia_custom_themes') || '{}';
       const storedThemes = JSON.parse(storedThemesStr);
       storedThemes[targetId] = {
         ...(storedThemes[targetId] || {}),
-        theme_primary: updates.theme_primary,
-        theme_secondary: updates.theme_secondary,
-        theme_card_bg: updates.theme_card_bg
+        theme_primary: finalUpdates.theme_primary,
+        theme_secondary: finalUpdates.theme_secondary,
+        theme_card_bg: finalUpdates.theme_card_bg
       };
       localStorage.setItem('trivia_custom_themes', JSON.stringify(storedThemes));
     }
@@ -852,7 +879,7 @@ export async function fetchLeaderboardsSupabase(): Promise<LeaderboardInfo[]> {
       theme_secondary: b.theme_secondary,
       theme_card_bg: b.theme_card_bg,
     }));
-    return mergeLocalThemes(raw);
+    return mergeLocalThemes(raw).map(applyTexacoOverride);
   }
 
   try {
@@ -868,7 +895,7 @@ export async function fetchLeaderboardsSupabase(): Promise<LeaderboardInfo[]> {
       theme_secondary: b.secondary_color || b.theme_secondary,
       theme_card_bg: b.background_color || b.theme_card_bg || 'light',
     }));
-    return mergeLocalThemes(mapped);
+    return mergeLocalThemes(mapped).map(applyTexacoOverride);
   } catch (err) {
     console.warn('Failed to fetch leaderboards list from Supabase, returning simulated ones:', err);
     const raw = [
@@ -879,7 +906,7 @@ export async function fetchLeaderboardsSupabase(): Promise<LeaderboardInfo[]> {
         created_at: new Date().toISOString()
       }
     ];
-    return mergeLocalThemes(raw);
+    return mergeLocalThemes(raw).map(applyTexacoOverride);
   }
 }
 
@@ -912,7 +939,7 @@ export async function createLeaderboardSupabase(
     const list = fetchLeaderboards();
     list.push(newRow);
     saveLeaderboards(list);
-    return newRow;
+    return applyTexacoOverride(newRow);
   }
 
   try {
@@ -942,7 +969,7 @@ export async function createLeaderboardSupabase(
        console.error('Supabase write error details:', error);
        throw error;
     }
-    return data;
+    return applyTexacoOverride(data);
   } catch (err) {
     console.error('Error creating leaderboard in Supabase:', err);
     throw err;
