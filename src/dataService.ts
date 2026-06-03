@@ -276,6 +276,33 @@ export async function fetchQuestions(leaderboardId: string = '00000000-0000-0000
   }
 }
 
+export function sortAndConsecutiveRank(rows: any[]): LeaderboardRow[] {
+  const mapped = rows.map((r, idx) => ({
+    player_id: r.player_id,
+    name: r.name || r.player_name || 'Jugador Anónimo',
+    player_name: r.player_name || r.name || 'Jugador Anónimo',
+    total_xp: Number(r.total_xp || 0),
+    correct_answers: Number(r.correct_answers || 0),
+    total_answers: Number(r.total_answers || 0),
+    rank: Number(r.rank || idx + 1),
+    last_answer_at: r.last_answer_at || r.created_at || new Date().toISOString()
+  }));
+
+  mapped.sort((a, b) => {
+    if (b.total_xp !== a.total_xp) {
+      return b.total_xp - a.total_xp;
+    }
+    const timeA = new Date(a.last_answer_at).getTime();
+    const timeB = new Date(b.last_answer_at).getTime();
+    return timeA - timeB;
+  });
+
+  return mapped.map((row, index) => ({
+    ...row,
+    rank: index + 1
+  }));
+}
+
 export async function fetchLeaderboard(leaderboardId: string = '00000000-0000-0000-0000-000000000001'): Promise<LeaderboardRow[]> {
   if (isDemoMode()) {
     return calculateSimulatedLeaderboard(leaderboardId);
@@ -286,37 +313,29 @@ export async function fetchLeaderboard(leaderboardId: string = '00000000-0000-00
     const { data, error } = await supabase!
       .from('leaderboard_results')
       .select('*')
-      .eq('leaderboard_id', leaderboardId)
-      .order('rank', { ascending: true });
+      .eq('leaderboard_id', leaderboardId);
 
     if (!error && data && data.length > 0) {
-      return data.map((row, idx) => ({
-        ...row,
-        rank: row.rank || idx + 1
-      })) as LeaderboardRow[];
+      return sortAndConsecutiveRank(data);
     }
 
     // Try normal 'leaderboard' view fallback
     const { data: fbData, error: fbError } = await supabase!
       .from('leaderboard')
       .select('*')
-      .eq('leaderboard_id', leaderboardId)
-      .order('rank', { ascending: true });
+      .eq('leaderboard_id', leaderboardId);
 
     if (fbError) {
       // Try 'leaderboard_results' fallback but without eq filter (last resort)
       const { data: fbData2, error: fbError2 } = await supabase!
         .from('leaderboard_results')
-        .select('*')
-        .order('rank', { ascending: true });
+        .select('*');
       if (fbError2) throw fbError2;
-      return (fbData2 || []).map((row, idx) => ({ ...row, rank: row.rank || idx + 1 })).filter(r => r.leaderboard_id === leaderboardId) as LeaderboardRow[];
+      const filtered = (fbData2 || []).filter(r => r.leaderboard_id === leaderboardId);
+      return sortAndConsecutiveRank(filtered);
     }
     
-    return (fbData || []).map((row, idx) => ({
-      ...row,
-      rank: row.rank || idx + 1
-    })) as LeaderboardRow[];
+    return sortAndConsecutiveRank(fbData || []);
   } catch (error) {
     console.error('Error fetching leaderboard from Supabase, reverting to simulation:', error);
     return calculateSimulatedLeaderboard(leaderboardId);
@@ -610,7 +629,9 @@ function applyTexacoOverride<T extends { name?: string; description?: string; th
   }
   
   if (name.toLowerCase().includes('salvador') || desc.toLowerCase().includes('salvador')) {
-    res.prize_top_n = 2;
+    if (res.prize_top_n === undefined || res.prize_top_n === null) {
+      res.prize_top_n = 2;
+    }
   }
   
   return res;
@@ -721,7 +742,9 @@ export async function updateLeaderboardDetailsSupabase(
   const isSalvador = finalUpdates.name?.toLowerCase().includes('salvador') || 
                      finalUpdates.prize_description?.toLowerCase().includes('salvador');
   if (isSalvador) {
-    finalUpdates.prize_top_n = 2;
+    if (finalUpdates.prize_top_n === undefined || finalUpdates.prize_top_n === null) {
+      finalUpdates.prize_top_n = 2;
+    }
   }
 
   if (isDemoMode()) {

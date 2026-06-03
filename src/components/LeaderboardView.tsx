@@ -795,14 +795,16 @@ export default function LeaderboardView() {
                       </div>
 
                       {/* 3rd Place */}
-                      <div className="p-3.5 bg-amber-50/50 border border-amber-100 rounded-2xl flex gap-3.5 items-center">
+                      <div className={`p-3.5 border rounded-2xl flex gap-3.5 items-center ${activeLeaderboard?.prize_top_n && activeLeaderboard.prize_top_n >= 3 ? 'bg-[#fed600]/10 border-[#fed600]/30' : 'bg-slate-50 border-slate-200/60'}`}>
                         <div className="text-2xl shrink-0">🥉</div>
                         <div>
                           <div className="font-bold text-[#111211]">
-                            3er Lugar
+                            3er Lugar {activeLeaderboard?.prize_top_n && activeLeaderboard.prize_top_n >= 3 && "(Premio TOP 3)"}
                           </div>
                           <p className="text-[10px] text-slate-500 mt-0.5">
-                            Reconocimiento destacado
+                            {activeLeaderboard?.prize_top_n && activeLeaderboard.prize_top_n >= 3
+                              ? `${activeLeaderboard.prize_title || "Premios del Evento"}`
+                              : "Reconocimiento destacado"}
                           </p>
                         </div>
                       </div>
@@ -854,6 +856,14 @@ export default function LeaderboardView() {
                           2
                         </span>
                       </div>
+                      {activeLeaderboard?.prize_top_n && activeLeaderboard.prize_top_n >= 2 && (
+                        <div 
+                          className="mt-1.5 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full select-none"
+                          style={{ backgroundColor: primaryColor, color: secondaryColor }}
+                        >
+                          Ganador
+                        </div>
+                      )}
                       <div className="mt-2 font-display text-xs sm:text-sm font-black text-slate-800 truncate max-w-[90px] uppercase">
                         {podium.second.player_name || ""}
                       </div>
@@ -892,7 +902,7 @@ export default function LeaderboardView() {
                         className="w-14 h-14 bg-yellow-100 border-2 rounded-full flex items-center justify-center text-2xl shadow-md relative z-20"
                         style={{ borderColor: primaryColor }}
                       >
-                        👑
+                        🥇
                         <span 
                           className="absolute -bottom-1 -right-1 w-6 h-6 text-xs font-black rounded-full flex items-center justify-center ring-2 ring-white rank-number"
                           style={{ backgroundColor: primaryColor, color: secondaryColor }}
@@ -955,6 +965,14 @@ export default function LeaderboardView() {
                           3
                         </span>
                       </div>
+                      {activeLeaderboard?.prize_top_n && activeLeaderboard.prize_top_n >= 3 && (
+                        <div 
+                          className="mt-1.5 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full select-none"
+                          style={{ backgroundColor: primaryColor, color: secondaryColor }}
+                        >
+                          Ganador
+                        </div>
+                      )}
                       <div className="mt-2 font-display text-xs sm:text-sm font-black text-slate-800 truncate max-w-[90px] uppercase">
                         {podium.third.player_name || ""}
                       </div>
@@ -995,6 +1013,7 @@ export default function LeaderboardView() {
                     const isRank2 = row.rank === 2;
                     const isRank3 = row.rank === 3;
                     const isTop3 = row.rank <= 3;
+                    const isWithinWinnerLimit = row.rank <= (activeLeaderboard?.prize_top_n || 1);
 
                     let medalBadge = null;
                     let numBadgeStyle: React.CSSProperties = { color: "#94a3b8" };
@@ -1009,6 +1028,9 @@ export default function LeaderboardView() {
                     } else if (isRank3) {
                       bgCircleStyle = { backgroundColor: "#4a4b4a", color: "white" };
                       numBadgeStyle = { color: "white", fontWeight: "900" };
+                    } else if (isWithinWinnerLimit) {
+                      bgCircleStyle = { backgroundColor: `${primaryColor}22`, color: primaryColor, borderWidth: '1.5px', borderStyle: 'solid', borderColor: primaryColor };
+                      numBadgeStyle = { color: primaryColor, fontWeight: "900" };
                     } else {
                       numBadgeStyle = { color: "#64748b", fontWeight: "700" };
                       bgCircleStyle = { backgroundColor: "transparent" };
@@ -1025,7 +1047,12 @@ export default function LeaderboardView() {
                     return (
                       <motion.div
                         key={row.player_id}
-                        className="p-3.5 sm:p-4 flex items-center justify-between gap-4 bg-white hover:bg-slate-50 border-l-4 border-transparent hover:border-[#fed600] transition-colors"
+                        className={`p-3.5 sm:p-4 flex items-center justify-between gap-4 border-l-4 transition-all ${
+                          isWithinWinnerLimit 
+                            ? "bg-[#fed600]/5 hover:bg-[#fed600]/10" 
+                            : "bg-white hover:bg-slate-50"
+                        }`}
+                        style={{ borderLeftColor: isWithinWinnerLimit ? primaryColor : "transparent" }}
                         layoutId={`player-row-${row.player_id}`}
                       >
                           {/* LEFT: Rank Num avatar circle & Competitor Name */}
