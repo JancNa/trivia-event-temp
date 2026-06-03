@@ -700,7 +700,7 @@ export default function LeaderboardView() {
                 className="text-2xl sm:text-3.5xl font-black tracking-tight mt-1"
                 style={{ color: secondaryColor }}
               >
-                TOP 1
+                TOP {activeLeaderboard?.prize_top_n || 1}
               </span>
             </div>
           </div>
@@ -780,14 +780,16 @@ export default function LeaderboardView() {
                       </div>
 
                       {/* 2nd Place */}
-                      <div className="p-3.5 bg-slate-50 border border-slate-200/60 rounded-2xl flex gap-3.5 items-center">
+                      <div className={`p-3.5 border rounded-2xl flex gap-3.5 items-center ${activeLeaderboard?.prize_top_n && activeLeaderboard.prize_top_n >= 2 ? 'bg-amber-50/40 border-yellow-200' : 'bg-slate-50 border-slate-200/60'}`}>
                         <div className="text-2xl shrink-0">🥈</div>
                         <div>
                           <div className="font-bold text-[#111211]">
-                            2do Lugar
+                            2do Lugar {activeLeaderboard?.prize_top_n && activeLeaderboard.prize_top_n >= 2 && "(Premio TOP 2)"}
                           </div>
                           <p className="text-[10px] text-slate-500 mt-0.5">
-                            Reconocimiento destacado
+                            {activeLeaderboard?.prize_top_n && activeLeaderboard.prize_top_n >= 2
+                              ? `${activeLeaderboard.prize_title || "Premios del Evento"}`
+                              : "Reconocimiento destacado"}
                           </p>
                         </div>
                       </div>
@@ -1071,8 +1073,8 @@ export default function LeaderboardView() {
                             </span>
                           </div>
 
-                          {/* OUTLINE TROPHY BADGE (Only for #1) */}
-                          {row.rank === 1 && (
+                          {/* OUTLINE TROPHY BADGE (According to prize_top_n count) */}
+                          {row.rank <= (activeLeaderboard?.prize_top_n || 1) && (
                             <div 
                               className="px-2.5 py-1.5 text-[10px] font-extrabold uppercase rounded-lg tracking-widest flex items-center gap-1 shadow-sm select-none"
                               style={{

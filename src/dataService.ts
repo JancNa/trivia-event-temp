@@ -596,20 +596,24 @@ export async function finalizePlayerResults(
   }
 }
 
-function applyTexacoOverride<T extends { name?: string; description?: string; theme_primary?: string; theme_secondary?: string; primary_color?: string; secondary_color?: string } | null | undefined>(board: T): T {
+function applyTexacoOverride<T extends { name?: string; description?: string; theme_primary?: string; theme_secondary?: string; primary_color?: string; secondary_color?: string; prize_top_n?: number } | null | undefined>(board: T): T {
   if (!board) return board;
-  const name = board.name || '';
-  const desc = board.description || '';
+  let res = { ...board };
+  const name = res.name || '';
+  const desc = res.description || '';
+  
   if (name.toLowerCase().includes('texaco') || desc.toLowerCase().includes('texaco')) {
-    return {
-      ...board,
-      primary_color: '#d03730',
-      secondary_color: '#111211',
-      theme_primary: '#d03730',
-      theme_secondary: '#111211',
-    };
+    res.primary_color = '#d03730';
+    res.secondary_color = '#111211';
+    res.theme_primary = '#d03730';
+    res.theme_secondary = '#111211';
   }
-  return board;
+  
+  if (name.toLowerCase().includes('salvador') || desc.toLowerCase().includes('salvador')) {
+    res.prize_top_n = 2;
+  }
+  
+  return res;
 }
 
 export async function fetchActiveLeaderboardInfo(leaderboardId: string = '00000000-0000-0000-0000-000000000001'): Promise<LeaderboardInfo | null> {
@@ -713,6 +717,13 @@ export async function updateLeaderboardDetailsSupabase(
     finalUpdates.secondary_color = '#111211';
   }
 
+  // Check if name contains 'salvador'
+  const isSalvador = finalUpdates.name?.toLowerCase().includes('salvador') || 
+                     finalUpdates.prize_description?.toLowerCase().includes('salvador');
+  if (isSalvador) {
+    finalUpdates.prize_top_n = 2;
+  }
+
   if (isDemoMode()) {
     const list = fetchLeaderboards();
     const updated = list.map(b => {
@@ -742,6 +753,7 @@ export async function updateLeaderboardDetailsSupabase(
       primary_color: finalUpdates.theme_primary,
       secondary_color: finalUpdates.theme_secondary,
       background_color: finalUpdates.theme_card_bg,
+      prize_top_n: finalUpdates.prize_top_n,
     };
 
     // If there are theme colors, also save to local storage as a robust fallback
